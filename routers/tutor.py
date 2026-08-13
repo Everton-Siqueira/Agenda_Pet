@@ -34,4 +34,70 @@ def create_tutor(tutor: Tutor):
    
     return {"message": "Tutor criado com sucesso!"}
 
+@router.get("")
+def get_tutores():
+    try:
+        with engine.connect() as conn:
+            sql = """SELECT * FROM tutor"""
+            result = conn.execute(text(sql))
+            tutores = [dict(row) for row in result]
+            return tutores
+    except Exception as e:
+        return {"error": str(e)}
+
+@router.get("/{tutor_id}")
+def get_tutor(tutor_id: int):  
+    try:
+        with engine.connect() as conn:
+            sql = """SELECT * FROM tutor WHERE id_tutor = :tutor_id"""
+            result = conn.execute(text(sql), {"tutor_id": tutor_id})
+            tutor = result.fetchone()
+            if tutor:
+                return dict(tutor)
+            else:
+                return {"message": "Tutor não encontrado"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@router.put("/{tutor_id}")
+def update_tutor(tutor_id: int, tutor: Tutor):
+    try:
+        with engine.connect() as conn:
+            sql = """UPDATE tutor SET nome = :nome, celular = :celular, endereco = :endereco 
+                    WHERE id_tutor = :tutor_id"""
+
+            dados = {
+                "nome": tutor.nome,
+                "celular": tutor.celular,
+                "endereco": tutor.endereco,
+                "tutor_id": tutor_id
+            }
+
+            result = conn.execute(text(sql), dados)
+            conn.commit()
+
+            if result.rowcount == 0:
+                return {"message": "Tutor não encontrado"}
+    except Exception as e:
+        return {"error": str(e)}          
+    
+   
+    return {"message": "Tutor atualizado com sucesso!"}
+
+@router.delete("/{tutor_id}")
+def delete_tutor(tutor_id: int):
+    try:
+        with engine.connect() as conn:
+            sql = """DELETE FROM tutor WHERE id_tutor = :tutor_id"""
+            result = conn.execute(text(sql), {"tutor_id": tutor_id})
+            conn.commit()
+
+            if result.rowcount == 0:
+                return {"message": "Tutor não encontrado"}
+    except Exception as e:
+        return {"error": str(e)}          
+    
+   
+    return {"message": "Tutor deletado com sucesso!"}           
+
     
