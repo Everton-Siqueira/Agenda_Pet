@@ -40,7 +40,7 @@ def get_tutores():
         with engine.connect() as conn:
             sql = """SELECT * FROM tutor"""
             result = conn.execute(text(sql))
-            tutores = [dict(row_mapping) for row in result]
+            tutores = [dict(row._mapping) for row in result]
             return tutores
     except Exception as e:
         return {"error": str(e)}
