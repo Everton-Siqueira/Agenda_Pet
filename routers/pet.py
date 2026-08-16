@@ -15,7 +15,7 @@ engine = create_engine(DATABASE_URL)
 @router.post("")
 def create_pet(pet: Pet):
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """INSERT INTO pet (nome_pet, especie, id_tutor) 
                     VALUES (:nome_pet, :especie, :id_tutor)"""
 
@@ -65,7 +65,7 @@ def get_pet(pet_id: int):
 @router.put("/{pet_id}")
 def update_pet(pet_id: int, pet: Pet):  
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """UPDATE pet SET nome_pet = :nome_pet, especie = :especie, id_tutor = :id_tutor 
                     WHERE id_pet = :pet_id"""
 
@@ -89,7 +89,7 @@ def update_pet(pet_id: int, pet: Pet):
 @router.delete("/{pet_id}")
 def delete_pet(pet_id: int):    
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """DELETE FROM pet WHERE id_pet = :pet_id"""
             result = conn.execute(text(sql), {"pet_id": pet_id})
             conn.commit()

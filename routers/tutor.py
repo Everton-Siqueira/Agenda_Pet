@@ -16,7 +16,7 @@ engine = create_engine(DATABASE_URL)
 @router.post("")
 def create_tutor(tutor: Tutor):
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """INSERT INTO tutor (nome, celular, endereco) 
                     VALUES (:nome, :celular, :endereco)"""
 
@@ -62,7 +62,7 @@ def get_tutor(tutor_id: int):
 @router.put("/{tutor_id}")
 def update_tutor(tutor_id: int, tutor: Tutor):
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """UPDATE tutor SET nome = :nome, celular = :celular, endereco = :endereco 
                     WHERE id_tutor = :tutor_id"""
 
@@ -87,7 +87,7 @@ def update_tutor(tutor_id: int, tutor: Tutor):
 @router.delete("/{tutor_id}")
 def delete_tutor(tutor_id: int):
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """DELETE FROM tutor WHERE id_tutor = :tutor_id"""
             result = conn.execute(text(sql), {"tutor_id": tutor_id})
             conn.commit()
