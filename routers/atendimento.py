@@ -88,11 +88,25 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
     except Exception as e:
         return {"error": str(e)}
 
-    return {"message": "Atendimento atualizado com sucesso!"}      @router.get("/{atendimento_id}")
+    return {"message": "Atendimento atualizado com sucesso!"}      
+
+@router.get("/{atendimento_id}")
 def get_atendimento(atendimento_id: int):
     try:
         with engine.connect() as conn:
-            sql = """SELECT * FROM atendimento WHERE atendiment0_id = :atendimento_id"""
+            sql = """SELECT
+                    a.id,
+                    a.data_atendimento,
+                    a.horario_atendimento,
+                    t.nome AS nome_tutor,
+                    p.nome_pet,
+                    a.id_servico,
+                    a.valor
+                FROM atendimento a
+                JOIN tutor t ON t.id = a.id_tutor
+                JOIN pet p ON p.id = a.id_pet
+                WHERE a.id = :atendimento_id"""
+
             result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
             atendimento = result.fetchone()
             if atendimento:
