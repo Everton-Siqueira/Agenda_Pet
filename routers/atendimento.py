@@ -15,13 +15,13 @@ engine = create_engine(DATABASE_URL)
 def create_atendimento(atendimento: Atendimento):
     try:
         with engine.connect() as conn:
-            sql = """INSERT INTO atendimento (id_pet, data_atendimento, servico, valor) 
-                    VALUES (:id_pet, :data_atendimento, :servico, :valor)"""
+            sql = """INSERT INTO atendimento (id_pet, data_atendimento, id_servico, valor) 
+                    VALUES (:id_pet, :data_atendimento, :id_servico, :valor)"""
 
             dados = {
                 "id_pet": atendimento.id_pet,
                 "data_atendimento": atendimento.data_atendimento,
-                "servico": atendimento.servico,
+                "id_servico": atendimento.id_servico,
                 "valor": atendimento.valor
             }
 
