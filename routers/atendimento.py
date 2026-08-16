@@ -14,7 +14,7 @@ engine = create_engine(DATABASE_URL)
 @router.post("")
 def create_atendimento(atendimento: Atendimento):
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """INSERT INTO atendimento (id_pet, data_atendimento, id_servico, valor) 
                     VALUES (:id_pet, :data_atendimento, :id_servico, :valor)"""
 
@@ -46,25 +46,12 @@ def get_atendimentos():
 
     return {"message": "Atendimentos listados com sucesso!"}
 
-@router.get("/{atendimento_id}")
-def get_atendimento(atendimento_id: int):
-    try:
-        with engine.connect() as conn:
-            sql = """SELECT * FROM atendimento WHERE id_atendimento = :atendimento_id"""
-            result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
-            atendimento = result.fetchone()
-            if atendimento:
-                return dict(atendimento)
-            else:
-                return {"message": "Atendimento não encontrado"}
-    except Exception as e:
-        return {"error": str(e)}
-    return {"message": "Atendimento listado com sucesso!"}
+
 
 @router.delete("/{atendimento_id}")
 def delete_atendimento(atendimento_id: int):
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """DELETE FROM atendimento WHERE id_atendimento = :atendimento_id"""
             result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
             conn.commit()
@@ -80,7 +67,7 @@ def delete_atendimento(atendimento_id: int):
 @router.put("/{atendimento_id}")
 def update_atendimento(atendimento_id: int, atendimento: Atendimento):
     try:
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             sql = """UPDATE atendimento 
                     SET id_pet = :id_pet, data_atendimento = :data_atendimento, servico = :servico, valor = :valor 
                     WHERE id_atendimento = :atendimento_id"""
@@ -101,4 +88,17 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
     except Exception as e:
         return {"error": str(e)}
 
-    return {"message": "Atendimento atualizado com sucesso!"}      
+    return {"message": "Atendimento atualizado com sucesso!"}      @router.get("/{atendimento_id}")
+def get_atendimento(atendimento_id: int):
+    try:
+        with engine.connect() as conn:
+            sql = """SELECT * FROM atendimento WHERE atendiment0_id = :atendimento_id"""
+            result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
+            atendimento = result.fetchone()
+            if atendimento:
+                return dict(atendimento._mapping)
+            else:
+                return {"message": "Atendimento não encontrado"}
+    except Exception as e:
+        return {"error": str(e)}
+    return {"message": "Atendimento listado com sucesso!"}
