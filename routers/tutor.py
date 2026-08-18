@@ -49,7 +49,7 @@ def get_tutores():
 def get_tutor(tutor_id: int):  
     try:
         with engine.connect() as conn:
-            sql = """SELECT * FROM tutor WHERE id_tutor = :tutor_id"""
+            sql = """SELECT * FROM tutor WHERE id = :tutor_id"""
             result = conn.execute(text(sql), {"tutor_id": tutor_id})
             tutor = result.fetchone()
             if tutor:
@@ -64,7 +64,7 @@ def update_tutor(tutor_id: int, tutor: Tutor):
     try:
         with engine.begin() as conn:
             sql = """UPDATE tutor SET nome = :nome, celular = :celular, endereco = :endereco 
-                    WHERE id_tutor = :tutor_id"""
+                    WHERE id = :tutor_id"""
 
             dados = {
                 "nome": tutor.nome,
@@ -74,7 +74,7 @@ def update_tutor(tutor_id: int, tutor: Tutor):
             }
 
             result = conn.execute(text(sql), dados)
-            conn.execute()
+            
 
             if result.rowcount == 0:
                 return {"message": "Tutor não encontrado"}
@@ -88,9 +88,9 @@ def update_tutor(tutor_id: int, tutor: Tutor):
 def delete_tutor(tutor_id: int):
     try:
         with engine.begin() as conn:
-            sql = """DELETE FROM tutor WHERE id_tutor = :tutor_id"""
+            sql = """DELETE FROM tutor WHERE id = :tutor_id"""
             result = conn.execute(text(sql), {"tutor_id": tutor_id})
-            conn.execute()
+            
 
             if result.rowcount == 0:
                 return {"message": "Tutor não encontrado"}

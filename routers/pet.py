@@ -44,13 +44,12 @@ def get_pets():
     except Exception as e:
         return {"error": str(e)}
     
-    return {"message": "Pets listados com sucesso!"}
-
+   
 @router.get("/{pet_id}")
 def get_pet(pet_id: int):   
     try:
         with engine.connect() as conn:
-            sql = """SELECT * FROM pet WHERE id_pet = :pet_id"""
+            sql = """SELECT * FROM pet WHERE id = :pet_id"""
             result = conn.execute(text(sql), {"pet_id": pet_id})
             pet = result.fetchone()
             if pet:
@@ -60,14 +59,14 @@ def get_pet(pet_id: int):
     except Exception as e:
         return {"error": str(e)}
 
-    return {"message": "Pet listado com sucesso!"}
+    
 
 @router.put("/{pet_id}")
 def update_pet(pet_id: int, pet: Pet):  
     try:
         with engine.begin() as conn:
             sql = """UPDATE pet SET nome_pet = :nome_pet, especie = :especie, id_tutor = :id_tutor 
-                    WHERE id_pet = :pet_id"""
+                    WHERE id = :pet_id"""
 
             dados = {
                 "nome_pet": pet.nome_pet,
@@ -77,8 +76,7 @@ def update_pet(pet_id: int, pet: Pet):
             }
 
             result = conn.execute(text(sql), dados)
-            conn.execute()
-
+            
             if result.rowcount == 0:
                 return {"message": "Pet não encontrado"}
     except Exception as e:
@@ -90,9 +88,9 @@ def update_pet(pet_id: int, pet: Pet):
 def delete_pet(pet_id: int):    
     try:
         with engine.begin() as conn:
-            sql = """DELETE FROM pet WHERE id_pet = :pet_id"""
+            sql = """DELETE FROM pet WHERE id = :pet_id"""
             result = conn.execute(text(sql), {"pet_id": pet_id})
-            conn.execute()
+            
 
             if result.rowcount == 0:
                 return {"message": "Pet não encontrado"}
