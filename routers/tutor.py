@@ -53,7 +53,7 @@ def get_tutor(tutor_id: int):
             result = conn.execute(text(sql), {"tutor_id": tutor_id})
             tutor = result.fetchone()
             if tutor:
-                return dict(tutor)
+                return dict(tutor._mapping)
             else:
                 return {"message": "Tutor não encontrado"}
     except Exception as e:
