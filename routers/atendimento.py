@@ -76,7 +76,7 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
             dados = {
                 "id_pet": atendimento.id_pet,
                 "data_atendimento": atendimento.data_atendimento,
-                "horario_atendimento": atendimento.hora_atendimento,
+                "horario_atendimento": atendimento.horario_atendimento,
                 "id_servico": atendimento.id_servico,
                 "valor": atendimento.valor,
                 "atendimento_id": atendimento_id
