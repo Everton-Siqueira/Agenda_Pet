@@ -25,7 +25,7 @@ def create_servico(servico: Servico):
             }
 
             conn.execute(text(sql), dados)
-            conn.commit()
+            conn.execute()
     except Exception as e:
         return {"error": str(e)}          
     
@@ -53,7 +53,7 @@ def get_servico(servico_id: int):
             result = conn.execute(text(sql), {"servico_id": servico_id})
             servico = result.fetchone()
             if servico:
-                return dict(servico)
+                return dict(servico._mapping)
             else:
                 return {"message": "Serviço não encontrado"}
     except Exception as e:
@@ -76,7 +76,7 @@ def update_servico(servico_id: int, servico: Servico):
             }
 
             result = conn.execute(text(sql), dados)
-            conn.commit()
+            conn.execute()
 
             if result.rowcount == 0:
                 return {"message": "Serviço não encontrado"}
@@ -91,7 +91,7 @@ def delete_servico(servico_id: int):
         with engine.begin() as conn:
             sql = """DELETE FROM servico WHERE id_servico = :servico_id"""
             result = conn.execute(text(sql), {"servico_id": servico_id})
-            conn.commit()
+            conn.execute()
 
             if result.rowcount == 0:
                 return {"message": "Serviço não encontrado"}
