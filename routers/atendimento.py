@@ -15,12 +15,13 @@ engine = create_engine(DATABASE_URL)
 def create_atendimento(atendimento: Atendimento):
     try:
         with engine.begin() as conn:
-            sql = """INSERT INTO atendimento (id_pet, data_atendimento, id_servico, valor) 
-                    VALUES (:id_pet, :data_atendimento, :id_servico, :valor)"""
+            sql = """INSERT INTO atendimento (id_pet, data_atendimento, horario_atendimento, id_servico, valor) 
+                    VALUES (:id_pet, :data_atendimento, :horario_atendimento, :id_servico, :valor)"""
 
             dados = {
                 "id_pet": atendimento.id_pet,
                 "data_atendimento": atendimento.data_atendimento,
+                "horario_atendimento": atendimento.horario_atendimento,
                 "id_servico": atendimento.id_servico,
                 "valor": atendimento.valor
             }
@@ -69,12 +70,13 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
     try:
         with engine.begin() as conn:
             sql = """UPDATE atendimento 
-                    SET id_pet = :id_pet, data_atendimento = :data_atendimento, id_servico = :id_servico, valor = :valor 
+                    SET id_pet = :id_pet, data_atendimento = :data_atendimento, horario_atendimento = :horario_atendimento, id_servico = :id_servico, valor = :valor 
                     WHERE id = :atendimento_id"""
 
             dados = {
                 "id_pet": atendimento.id_pet,
                 "data_atendimento": atendimento.data_atendimento,
+                "horario_atendimento": atendimento.hora_atendimento,
                 "id_servico": atendimento.id_servico,
                 "valor": atendimento.valor,
                 "atendimento_id": atendimento_id
