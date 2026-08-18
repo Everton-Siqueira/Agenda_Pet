@@ -52,7 +52,7 @@ def get_atendimentos():
 def delete_atendimento(atendimento_id: int):
     try:
         with engine.begin() as conn:
-            sql = """DELETE FROM atendimento WHERE id_atendimento = :atendimento_id"""
+            sql = """DELETE FROM atendimento WHERE id = :atendimento_id"""
             result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
             
             if result.rowcount > 0:
@@ -70,12 +70,12 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
         with engine.begin() as conn:
             sql = """UPDATE atendimento 
                     SET id_pet = :id_pet, data_atendimento = :data_atendimento, id_servico = :id_servico, valor = :valor 
-                    WHERE id_atendimento = :atendimento_id"""
+                    WHERE id = :atendimento_id"""
 
             dados = {
                 "id_pet": atendimento.id_pet,
                 "data_atendimento": atendimento.data_atendimento,
-                "servico": atendimento.id_servico,
+                "id_servico": atendimento.id_servico,
                 "valor": atendimento.valor,
                 "atendimento_id": atendimento_id
             }
@@ -102,9 +102,10 @@ def get_atendimento(atendimento_id: int):
                     a.id_servico,
                     a.valor
                 FROM atendimento a
-                JOIN tutor t ON t.id = a.id_tutor
-                JOIN pet p ON p.id = a.id_pet
-                WHERE a.id = :atendimento_id"""
+                    JOIN pet p ON p.id = a.id_pet
+                    JOIN tutor t ON t.id = p.id_tutor
+                    JOIN servico s ON s.id = a.id_servico
+                    WHERE a.id = :atendimento_id"""
 
             result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
             atendimento = result.fetchone()
