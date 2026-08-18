@@ -26,7 +26,7 @@ def create_pet(pet: Pet):
             }
 
             conn.execute(text(sql), dados)
-            conn.commit()
+            conn.execute()
     except Exception as e:
         return {"error": str(e)}          
     
@@ -54,7 +54,7 @@ def get_pet(pet_id: int):
             result = conn.execute(text(sql), {"pet_id": pet_id})
             pet = result.fetchone()
             if pet:
-                return dict(pet)
+                return dict(pet._mapping)
             else:
                 return {"message": "Pet não encontrado"}
     except Exception as e:
@@ -77,7 +77,7 @@ def update_pet(pet_id: int, pet: Pet):
             }
 
             result = conn.execute(text(sql), dados)
-            conn.commit()
+            conn.execute()
 
             if result.rowcount == 0:
                 return {"message": "Pet não encontrado"}
@@ -92,7 +92,7 @@ def delete_pet(pet_id: int):
         with engine.begin() as conn:
             sql = """DELETE FROM pet WHERE id_pet = :pet_id"""
             result = conn.execute(text(sql), {"pet_id": pet_id})
-            conn.commit()
+            conn.execute()
 
             if result.rowcount == 0:
                 return {"message": "Pet não encontrado"}
