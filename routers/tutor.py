@@ -74,7 +74,7 @@ def update_tutor(tutor_id: int, tutor: Tutor):
             }
 
             result = conn.execute(text(sql), dados)
-            conn.commit()
+            conn.execute()
 
             if result.rowcount == 0:
                 return {"message": "Tutor não encontrado"}
@@ -90,7 +90,7 @@ def delete_tutor(tutor_id: int):
         with engine.begin() as conn:
             sql = """DELETE FROM tutor WHERE id_tutor = :tutor_id"""
             result = conn.execute(text(sql), {"tutor_id": tutor_id})
-            conn.commit()
+            conn.execute()
 
             if result.rowcount == 0:
                 return {"message": "Tutor não encontrado"}
