@@ -54,7 +54,7 @@ def delete_atendimento(atendimento_id: int):
         with engine.begin() as conn:
             sql = """DELETE FROM atendimento WHERE id_atendimento = :atendimento_id"""
             result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
-            conn.commit()
+            
             if result.rowcount > 0:
                 return {"message": "Atendimento deletado com sucesso!"}
             else:
@@ -69,20 +69,19 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
     try:
         with engine.begin() as conn:
             sql = """UPDATE atendimento 
-                    SET id_pet = :id_pet, data_atendimento = :data_atendimento, servico = :servico, valor = :valor 
+                    SET id_pet = :id_pet, data_atendimento = :data_atendimento, id_servico = :id_servico, valor = :valor 
                     WHERE id_atendimento = :atendimento_id"""
 
             dados = {
                 "id_pet": atendimento.id_pet,
                 "data_atendimento": atendimento.data_atendimento,
-                "servico": atendimento.servico,
+                "servico": atendimento.id_servico,
                 "valor": atendimento.valor,
                 "atendimento_id": atendimento_id
             }
 
             result = conn.execute(text(sql), dados)
-            conn.commit()
-
+            
             if result.rowcount == 0:
                 return {"message": "Atendimento não encontrado"}
     except Exception as e:
