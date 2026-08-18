@@ -101,7 +101,7 @@ def get_atendimento(atendimento_id: int):
                     a.horario_atendimento,
                     t.nome AS nome_tutor,
                     p.nome_pet,
-                    a.id_servico,
+                    s.tipo_servico AS servico,
                     a.valor
                 FROM atendimento a
                     JOIN pet p ON p.id = a.id_pet
