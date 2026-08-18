@@ -26,7 +26,7 @@ def create_atendimento(atendimento: Atendimento):
             }
 
             conn.execute(text(sql), dados)
-            conn.commit()
+            
     except Exception as e:
         return {"error": str(e)}          
     

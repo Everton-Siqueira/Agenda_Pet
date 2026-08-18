@@ -27,7 +27,7 @@ def create_tutor(tutor: Tutor):
             }
 
             conn.execute(text(sql), dados)
-            conn.commit()
+            
     except Exception as e:
         return {"error": str(e)}          
     

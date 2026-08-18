@@ -26,7 +26,7 @@ def create_pet(pet: Pet):
             }
 
             conn.execute(text(sql), dados)
-            conn.execute()
+            
     except Exception as e:
         return {"error": str(e)}          
     
