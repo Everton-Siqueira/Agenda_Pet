@@ -16,6 +16,8 @@ class Servico(BaseModel):
     @field_validator('tipo_servico')
     def validar_tipo_servico(cls, servico):
         servico = servico.strip()
+        servico = " ".join(servico.split())
+
         if not servico:
             raise ValueError("O tipo de serviço não pode ser vazio.")
         return servico
