@@ -20,6 +20,9 @@ class Servico(BaseModel):
 
         if not servico:
             raise ValueError("O tipo de serviço não pode ser vazio.")
+        for caracter in servico:
+            if caracter.isnumeric():
+                raise ValueError("O tipo de serviço não pode conter números.")
         return servico
 
 
