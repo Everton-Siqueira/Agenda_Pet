@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from decimal import Decimal
 
 class Servico(BaseModel):
     
@@ -7,7 +8,18 @@ class Servico(BaseModel):
     max_length=20,
     description="Tipo do serviço")
 
-    valor: float = Field(..., 
+    valor: Decimal = Field(..., 
     gt=0,
+    decimal_places=2,
     description="Valor do serviço")
+    
+    @field_validator('tipo_servico')
+    def validar_tipo_servico(cls, servico):
+        servico = servico.strip()
+        if not servico:
+            raise ValueError("O tipo de serviço não pode ser vazio.")
+        return servico
+
+
+
     
