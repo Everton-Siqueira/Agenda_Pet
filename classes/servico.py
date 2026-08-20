@@ -25,6 +25,30 @@ class Servico(BaseModel):
                 raise ValueError("O tipo de serviço não pode conter números.")
         return servico
 
+    
+    @field_validator('tipo_servico')
+    def validar_tipo_servico(cls, servico):
 
+        servico = servico.strip()
+        servico = " ".join(servico.split())
+
+    if not servico:
+        raise ValueError("O tipo de serviço não pode ser vazio.")
+
+    palavras_minusculas = ["de", "da", "do", "das", "dos"]
+    palavras = servico.split()
+
+    resultado = []
+
+    for palavra in palavras:
+        if palavra in palavras_minusculas:
+            resultado.append(palavra)
+
+        else:
+            resultado.append(palavra.title())
+
+        servico = " ".join(resultado)
+
+        return servico
 
     
