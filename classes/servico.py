@@ -19,33 +19,23 @@ class Servico(BaseModel):
         servico = " ".join(servico.split())
 
         if not servico:
-            raise ValueError("O tipo de serviço não pode ser vazio.")
+            raise ValueError("O tipo de serviço não pode estar vazio.")
+
         for caracter in servico:
             if caracter.isnumeric():
                 raise ValueError("O tipo de serviço não pode conter números.")
-        return servico
 
-    
-    @field_validator('tipo_servico')
-    def validar_tipo_servico(cls, servico):
+        palavras_minusculas = ["de", "da", "do", "das", "dos"]
+        palavras = servico.split()
 
-        servico = servico.strip()
-        servico = " ".join(servico.split())
+        resultado = []
 
-    if not servico:
-        raise ValueError("O tipo de serviço não pode ser vazio.")
+        for palavra in palavras:
+            if palavra in palavras_minusculas:
+                resultado.append(palavra)
 
-    palavras_minusculas = ["de", "da", "do", "das", "dos"]
-    palavras = servico.split()
-
-    resultado = []
-
-    for palavra in palavras:
-        if palavra in palavras_minusculas:
-            resultado.append(palavra)
-
-        else:
-            resultado.append(palavra.title())
+            else:
+                resultado.append(palavra.title())
 
         servico = " ".join(resultado)
 
