@@ -16,22 +16,49 @@ engine = create_engine(DATABASE_URL)
 def create_servico(servico: Servico):
     try:
         with engine.begin() as conn:
-            sql = """INSERT INTO servico (tipo_servico, valor) 
-                    VALUES (:tipo_servico, :valor)"""
+            sql = """
+                SELECT id
+                FROM servico
+                WHERE tipo_servico = :tipo_servico
+            """
 
+            result = conn.execute(
+                text(sql),
+                {"tipo_servico": servico.tipo_servico}
+            )
+
+            id_existente = result.scalar()
+
+            if id_existente is not None:
+                return {
+                    "message": "Serviço já cadastrado."
+                }
+
+
+
+            sql = """INSERT INTO servico (tipo_servico, valor) 
+                    VALUES (:tipo_servico, :valor)
+                    RETURNING id
+                    """
+
+            
             dados = {
                 "tipo_servico": servico.tipo_servico,
                 "valor": servico.valor
             }
 
-            conn.execute(text(sql), dados)
-            
+            result = conn.execute(text(sql), dados)
+
+            id_servico = result.scalar()
+
+            return {"id": id_servico,
+                    "tipo_servico": servico.tipo_servico,
+                    "valor": servico.valor
+            }
     except Exception as e:
         return {"error": str(e)}          
     
-   
-    return {"message": "Serviço criado com sucesso!"}
-
+    
 @router.get("")
 def get_servicos():  
     try:
@@ -56,6 +83,7 @@ def get_servico(servico_id: int):
             else:
                 return {"message": "Serviço não encontrado"}
     except Exception as e:
+
         return {"error": str(e)}
 
     
