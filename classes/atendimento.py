@@ -5,6 +5,7 @@ from decimal import Decimal
 class Atendimento(BaseModel):
     id_pet: int = Field(...,
     gt= 0,
+    le=999,
     description="ID do pet atendido")
 
     data_atendimento: date = Field(...,

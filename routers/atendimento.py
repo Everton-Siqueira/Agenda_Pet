@@ -121,7 +121,7 @@ def delete_atendimento(atendimento_id: int):
     except Exception as e:
         return {"error": str(e)}
 
-    return {"message": "Atendimento deletado com sucesso!"}
+    
 
 @router.put("/{atendimento_id}")
 def update_atendimento(atendimento_id: int, atendimento: Atendimento):
@@ -147,8 +147,7 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
     except Exception as e:
         return {"error": str(e)}
 
-    return {"message": "Atendimento atualizado com sucesso!"}      
-
+    
 @router.get("/{atendimento_id}")
 def get_atendimento(atendimento_id: int):
     try:
