@@ -15,8 +15,57 @@ engine = create_engine(DATABASE_URL)
 def create_atendimento(atendimento: Atendimento):
     try:
         with engine.begin() as conn:
+            sql = """SELECT id
+                FROM pet
+                WHERE id = :id_pet"""
+
+            result = conn.execute(text(sql), {"id_pet": atendimento.id_pet})
+            id_pet_existente = result.scalar()
+
+
+            if id_pet_existente is None:
+                return {
+                    "message": "Pet não encontrado."
+                }
+
+            sql = """
+                SELECT id
+                FROM servico
+                WHERE id = :id_servico
+                """
+
+            result = conn.execute(
+                text(sql),
+                {"id_servico": atendimento.id_servico}
+        )
+
+            id_servico_existente = result.scalar()
+
+            if id_servico_existente is None:
+                return {
+                    "message": "Serviço não encontrado."
+                }
+
+
+            sql = """SELECT id
+                FROM atendimento
+                WHERE id_pet = :id_pet AND data_atendimento = :data_atendimento AND horario_atendimento = :horario_atendimento"""
+
+            result = conn.execute(text(sql), {
+                "id_pet": atendimento.id_pet,
+                "data_atendimento": atendimento.data_atendimento,
+                "horario_atendimento": atendimento.horario_atendimento
+            })
+            id_existente = result.scalar()
+
+            if id_existente is not None:
+                return {"message": "Atendimento já cadastrado."
+                } 
+
+                       
             sql = """INSERT INTO atendimento (id_pet, data_atendimento, horario_atendimento, id_servico, valor) 
-                    VALUES (:id_pet, :data_atendimento, :horario_atendimento, :id_servico, :valor)"""
+                    VALUES (:id_pet, :data_atendimento, :horario_atendimento, :id_servico, :valor)
+                    RETURNING id"""
 
             dados = {
                 "id_pet": atendimento.id_pet,
@@ -26,14 +75,23 @@ def create_atendimento(atendimento: Atendimento):
                 "valor": atendimento.valor
             }
 
-            conn.execute(text(sql), dados)
+            result = conn.execute(text(sql), dados)
+
+            id_atendimento = result.scalar()
+
+        return {
+                "id": id_atendimento,
+                "id_pet": atendimento.id_pet,
+                "data_atendimento": atendimento.data_atendimento,
+                "horario_atendimento": atendimento.horario_atendimento,
+                "id_servico": atendimento.id_servico,
+                "valor": atendimento.valor
+    }
             
     except Exception as e:
         return {"error": str(e)}          
     
-   
-    return {"message": "Atendimento criado com sucesso!"}
-
+     
 @router.get("")
 def get_atendimentos():  
     try:
