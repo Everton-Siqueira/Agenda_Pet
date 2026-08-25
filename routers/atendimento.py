@@ -56,13 +56,13 @@ def create_atendimento(atendimento: Atendimento):
                 "data_atendimento": atendimento.data_atendimento,
                 "horario_atendimento": atendimento.horario_atendimento
             })
+
             id_existente = result.scalar()
 
             if id_existente is not None:
                 return {"message": "Atendimento já cadastrado."
                 } 
 
-                       
             sql = """INSERT INTO atendimento (id_pet, data_atendimento, horario_atendimento, id_servico, valor) 
                     VALUES (:id_pet, :data_atendimento, :horario_atendimento, :id_servico, :valor)
                     RETURNING id"""
@@ -103,10 +103,7 @@ def get_atendimentos():
     except Exception as e:
         return {"error": str(e)}
 
-    return {"message": "Atendimentos listados com sucesso!"}
-
-
-
+    
 @router.delete("/{atendimento_id}")
 def delete_atendimento(atendimento_id: int):
     try:
@@ -127,6 +124,55 @@ def delete_atendimento(atendimento_id: int):
 def update_atendimento(atendimento_id: int, atendimento: Atendimento):
     try:
         with engine.begin() as conn:
+            sql = """ SELECT id 
+            FROM atendimento 
+            WHERE id = :atendimento_id """ 
+            
+            result = conn.execute( text(sql), 
+                {"atendimento_id": atendimento_id} 
+            ) 
+            
+            id_atendimento_existente = result.scalar() 
+            
+            if id_atendimento_existente is None: 
+                return { "message": "Atendimento não encontrado." }
+
+            sql = """ SELECT id 
+                FROM pet 
+                WHERE id = :id_pet """ 
+            result = conn.execute( text(sql), 
+            {"id_pet": atendimento.id_pet} 
+            ) 
+            
+            id_pet_existente = result.scalar() 
+            
+            if id_pet_existente is None: 
+                return { "message": "Pet não encontrado." }
+
+            sql = """ SELECT id 
+                FROM servico 
+                WHERE id = :id_servico """ 
+                
+            result = conn.execute( text(sql), 
+            {"id_servico": atendimento.id_servico} ) 
+            id_servico_existente = result.scalar() 
+            
+            if id_servico_existente is None: 
+                return { "message": "Serviço não encontrado." } 
+                
+            sql = """ SELECT id 
+                FROM atendimento 
+                WHERE id_pet = :id_pet AND data_atendimento = :data_atendimento AND horario_atendimento = :horario_atendimento AND id <> :atendimento_id """ 
+                
+            result = conn.execute( text(sql), 
+                    { "id_pet": atendimento.id_pet, "data_atendimento": atendimento.data_atendimento, "horario_atendimento": atendimento.horario_atendimento, "atendimento_id": atendimento_id } ) 
+                    
+            id_existente = result.scalar() 
+                    
+            if id_existente is not None: 
+                return { "message": "Já existe outro atendimento para este pet nessa data e horário." }    
+
+
             sql = """UPDATE atendimento 
                     SET id_pet = :id_pet, data_atendimento = :data_atendimento, horario_atendimento = :horario_atendimento, id_servico = :id_servico, valor = :valor 
                     WHERE id = :atendimento_id"""
@@ -141,13 +187,19 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
             }
 
             result = conn.execute(text(sql), dados)
+
+        return  {
+            "id": atendimento_id,
+            "id_pet": atendimento.id_pet,
+            "data_atendimento": atendimento.data_atendimento,
+            "horario_atendimento": atendimento.horario_atendimento,
+            "id_servico": atendimento.id_servico,
+            "valor": atendimento.valor  
+            }        
             
-            if result.rowcount == 0:
-                return {"message": "Atendimento não encontrado"}
     except Exception as e:
         return {"error": str(e)}
-
-    
+  
 @router.get("/{atendimento_id}")
 def get_atendimento(atendimento_id: int):
     try:
@@ -174,4 +226,4 @@ def get_atendimento(atendimento_id: int):
                 return {"message": "Atendimento não encontrado"}
     except Exception as e:
         return {"error": str(e)}
-    return {"message": "Atendimento listado com sucesso!"}
+    
