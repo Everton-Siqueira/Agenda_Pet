@@ -3,7 +3,9 @@ from fastapi import APIRouter, HTTPException
 from classes.dashboard import Dashboard
 from sqlalchemy import text
 
-@router.get("/dashboard")
+router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+@router.get("")
 def get_dashboard():
     try:
         with engine.begin() as conn:
@@ -38,4 +40,3 @@ def get_dashboard():
             status_code=500,
             detail=f"Erro ao obter dados do dashboard: {str(e)}"
         )
-        
