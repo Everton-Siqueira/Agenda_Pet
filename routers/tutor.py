@@ -6,7 +6,7 @@ from sqlalchemy import text
 router = APIRouter(prefix="/tutor", tags=["Tutor"])
 
 
-@router.post("", status_code=status.HTTP_21_CREATED)
+@router.post("")
 def create_tutor(tutor: Tutor):
     try:
         with engine.begin() as conn:
