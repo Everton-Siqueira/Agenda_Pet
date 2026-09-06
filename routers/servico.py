@@ -1,16 +1,10 @@
-import os
-from fastapi import APIRouter
-from dotenv import load_dotenv
+from database import engine
+from fastapi import APIRouter, HTTPException
 from classes.servico import Servico
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
-load_dotenv()
-DATABASE_URL = os.getenv('DATABASE_URL')
 
 router = APIRouter(prefix="/servico", tags=["Serviço"])
-
-engine = create_engine(DATABASE_URL)
-
 
 @router.post("")
 def create_servico(servico: Servico):
@@ -30,9 +24,10 @@ def create_servico(servico: Servico):
             id_existente = result.scalar()
 
             if id_existente is not None:
-                return {
-                    "message": "Serviço já cadastrado."
-                }
+                raise HTTPException(
+                    status_code=400,
+                    detail="Serviço já cadastrado."
+                )
 
 
 
@@ -55,8 +50,14 @@ def create_servico(servico: Servico):
                     "tipo_servico": servico.tipo_servico,
                     "valor": servico.valor
             }
+
+    except HTTPException:
+        raise        
     except Exception as e:
-        return {"error": str(e)}          
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao criar serviço: {str(e)}"  
+        )     
     
     
 @router.get("")
@@ -67,8 +68,14 @@ def get_servicos():
             result = conn.execute(text(sql))
             servicos = [dict(row._mapping) for row in result]
             return servicos
+    
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao buscar serviços: {str(e)}"
+        )
 
     
 @router.get("/{servico_id}")
@@ -81,10 +88,18 @@ def get_servico(servico_id: int):
             if servico:
                 return dict(servico._mapping)
             else:
-                return {"message": "Serviço não encontrado"}
-    except Exception as e:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Serviço não encontrado"
+                )
 
-        return {"error": str(e)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao buscar serviço: {str(e)}"
+        )
 
     
 @router.put("/{servico_id}")
@@ -105,9 +120,17 @@ def update_servico(servico_id: int, servico: Servico):
            
 
             if result.rowcount == 0:
-                return {"message": "Serviço não encontrado"}
+                raise HTTPException(
+                    status_code=404,
+                    detail="Serviço não encontrado"
+                )
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao atualizar serviço: {str(e)}"
+        )
 
     return {"message": "Serviço atualizado com sucesso!"}
 
@@ -120,9 +143,17 @@ def delete_servico(servico_id: int):
             
 
             if result.rowcount == 0:
-                return {"message": "Serviço não encontrado"}
+                raise HTTPException(
+                    status_code=404,
+                    detail="Serviço não encontrado"
+                )
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao deletar serviço: {str(e)}"
+        )
 
     return {"message": "Serviço deletado com sucesso!"} 
 
