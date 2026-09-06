@@ -1,15 +1,10 @@
-import os
-from fastapi import APIRouter
-from dotenv import load_dotenv
+from fastapi import APIRouter, HTTPException
 from classes.atendimento import Atendimento
-from sqlalchemy import create_engine, text
-
-load_dotenv()
-DATABASE_URL = os.getenv('DATABASE_URL')
+from sqlalchemy import text
+from database import engine
 
 router = APIRouter(prefix="/atendimento", tags=["Atendimento"])
 
-engine = create_engine(DATABASE_URL)
 
 @router.post("")
 def create_atendimento(atendimento: Atendimento):
@@ -24,10 +19,11 @@ def create_atendimento(atendimento: Atendimento):
 
 
             if id_pet_existente is None:
-                return {
-                    "message": "Pet não encontrado."
-                }
-
+                raise HTTPException(
+                    status_code=404,
+                    detail="Pet não encontrado."
+                )
+                
             sql = """
                 SELECT id
                 FROM servico
@@ -42,9 +38,11 @@ def create_atendimento(atendimento: Atendimento):
             id_servico_existente = result.scalar()
 
             if id_servico_existente is None:
-                return {
-                    "message": "Serviço não encontrado."
-                }
+                
+                raise HTTPException(
+                    status_code=404,
+                    detail="Serviço não encontrado."
+                )
 
 
             sql = """SELECT id
@@ -60,8 +58,11 @@ def create_atendimento(atendimento: Atendimento):
             id_existente = result.scalar()
 
             if id_existente is not None:
-                return {"message": "Atendimento já cadastrado."
-                } 
+                raise HTTPException(
+                    status_code=400,
+                    detail="Atendimento já cadastrado."
+                )
+                 
 
             sql = """INSERT INTO atendimento (id_pet, data_atendimento, horario_atendimento, id_servico, valor) 
                     VALUES (:id_pet, :data_atendimento, :horario_atendimento, :id_servico, :valor)
@@ -87,11 +88,15 @@ def create_atendimento(atendimento: Atendimento):
                 "id_servico": atendimento.id_servico,
                 "valor": atendimento.valor
     }
-            
+
+    except HTTPException:
+        raise        
     except Exception as e:
-        return {"error": str(e)}          
-    
-     
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno do servidor."
+        )
+
 @router.get("")
 def get_atendimentos():  
     try:
@@ -101,9 +106,11 @@ def get_atendimentos():
             atendimentos = [dict(row._mapping) for row in result]
             return atendimentos
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno do servidor."
+        )
 
-    
 @router.delete("/{atendimento_id}")
 def delete_atendimento(atendimento_id: int):
     try:
@@ -114,11 +121,15 @@ def delete_atendimento(atendimento_id: int):
             if result.rowcount > 0:
                 return {"message": "Atendimento deletado com sucesso!"}
             else:
-                return {"message": "Atendimento não encontrado"}
+                raise HTTPException(
+                    status_code=404,
+                    detail="Atendimento não encontrado."
+                )
     except Exception as e:
-        return {"error": str(e)}
-
-    
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno do servidor."
+        )
 
 @router.put("/{atendimento_id}")
 def update_atendimento(atendimento_id: int, atendimento: Atendimento):
@@ -135,7 +146,10 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
             id_atendimento_existente = result.scalar() 
             
             if id_atendimento_existente is None: 
-                return { "message": "Atendimento não encontrado." }
+                raise HTTPException(
+                    status_code=404,
+                    detail="Atendimento não encontrado."
+                )
 
             sql = """ SELECT id 
                 FROM pet 
@@ -147,7 +161,10 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
             id_pet_existente = result.scalar() 
             
             if id_pet_existente is None: 
-                return { "message": "Pet não encontrado." }
+                raise HTTPException(
+                    status_code=404,
+                    detail="Pet não encontrado."
+                )
 
             sql = """ SELECT id 
                 FROM servico 
@@ -158,8 +175,11 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
             id_servico_existente = result.scalar() 
             
             if id_servico_existente is None: 
-                return { "message": "Serviço não encontrado." } 
-                
+                raise HTTPException(
+                    status_code=404,
+                    detail="Serviço não encontrado."
+                )
+
             sql = """ SELECT id 
                 FROM atendimento 
                 WHERE id_pet = :id_pet AND data_atendimento = :data_atendimento AND horario_atendimento = :horario_atendimento AND id <> :atendimento_id """ 
@@ -170,7 +190,10 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
             id_existente = result.scalar() 
                     
             if id_existente is not None: 
-                return { "message": "Já existe outro atendimento para este pet nessa data e horário." }    
+                raise HTTPException(
+                    status_code=400,
+                    detail="Já existe outro atendimento para este pet nessa data e horário."
+                )
 
 
             sql = """UPDATE atendimento 
@@ -198,8 +221,11 @@ def update_atendimento(atendimento_id: int, atendimento: Atendimento):
             }        
             
     except Exception as e:
-        return {"error": str(e)}
-  
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno do servidor."
+        )
+
 @router.get("/{atendimento_id}")
 def get_atendimento(atendimento_id: int):
     try:
@@ -213,9 +239,9 @@ def get_atendimento(atendimento_id: int):
                     s.tipo_servico AS servico,
                     a.valor
                 FROM atendimento a
-                    JOIN pet p ON p.id = a.id_pet
-                    JOIN tutor t ON t.id = p.id_tutor
-                    JOIN servico s ON s.id = a.id_servico
+                    LEFT JOIN pet p ON p.id = a.id_pet
+                    LEFT JOIN tutor t ON t.id = p.id_tutor
+                    LEFT JOIN servico s ON s.id = a.id_servico
                     WHERE a.id = :atendimento_id"""
 
             result = conn.execute(text(sql), {"atendimento_id": atendimento_id})
@@ -223,7 +249,15 @@ def get_atendimento(atendimento_id: int):
             if atendimento:
                 return dict(atendimento._mapping)
             else:
-                return {"message": "Atendimento não encontrado"}
+                raise HTTPException(
+                    status_code=404,
+                    detail="Atendimento não encontrado."
+                )
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(
+            status_code=500,
+            detail="Erro interno do servidor."
+        )
     
