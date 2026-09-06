@@ -1,17 +1,9 @@
-import os
-from fastapi import APIRouter
-from dotenv import load_dotenv
+from database import engine
+from fastapi import APIRouter, HTTPException
 from classes.tutor import Tutor
-from sqlalchemy import create_engine, text
-
-load_dotenv()
-DATABASE_URL = os.getenv('DATABASE_URL')
-print(DATABASE_URL)
+from sqlalchemy import text
 
 router = APIRouter(prefix="/tutor", tags=["Tutor"])
-
-engine = create_engine(DATABASE_URL)
-
 
 @router.post("")
 def create_tutor(tutor: Tutor):
@@ -55,7 +47,7 @@ def get_tutor(tutor_id: int):
             if tutor:
                 return dict(tutor._mapping)
             else:
-                return {"message": "Tutor não encontrado"}
+                raise HTTPException(status_code=404, detail="Tutor não encontrado")
     except Exception as e:
         return {"error": str(e)}
 
@@ -77,7 +69,7 @@ def update_tutor(tutor_id: int, tutor: Tutor):
             
 
             if result.rowcount == 0:
-                return {"message": "Tutor não encontrado"}
+                raise HTTPException(status_code=404, detail="Tutor não encontrado")
     except Exception as e:
         return {"error": str(e)}          
     
@@ -93,7 +85,7 @@ def delete_tutor(tutor_id: int):
             
 
             if result.rowcount == 0:
-                return {"message": "Tutor não encontrado"}
+                raise HTTPException(status_code=404, detail="Tutor não encontrado")
     except Exception as e:
         return {"error": str(e)}          
     
