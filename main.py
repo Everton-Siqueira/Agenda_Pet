@@ -13,6 +13,17 @@ app=FastAPI(
     version="1.0.0"
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
+# ATENÇÃO: Adicione este bloco logo após criar a variável 'app'
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite que qualquer frontend (web ou celular) acesse sua API
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],
+)
+
 app.include_router(pet.router)
 app.include_router(tutor.router)
 app.include_router(servico.router)
