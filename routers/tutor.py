@@ -136,3 +136,27 @@ def delete_tutor(tutor_id: int):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao deletar tutor: {str(e)}",
         )
+
+@router.get("/celular/{celular}")
+def get_tutor_por_celular(celular: str):
+    try:
+        with engine.connect() as conn:
+            # Busca pelo celular cadastrado
+            sql = """SELECT * FROM tutor WHERE celular = :celular"""
+            result = conn.execute(text(sql), {"celular": celular})
+            tutor = result.fetchone()
+
+            if tutor:
+                return dict(tutor._mapping)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Tutor não encontrado com este celular",
+                )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao buscar tutor por celular: {str(e)}",        
