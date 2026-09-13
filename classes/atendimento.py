@@ -29,4 +29,19 @@ class Atendimento(BaseModel):
         if horario_atendimento < time(9, 0) or horario_atendimento > time(18, 0):
             raise ValueError("O horário de atendimento deve estar entre 09:00 e 18:00.")
         return horario_atendimento
+
+    @field_validator("data_atendimento", mode="before")
+    def formatar_data_flexivel(cls, value):
+        if isinstance(value, str):
+            # 1. Remove qualquer caractere que não seja número (espaços, barras, hífens, pontos)
+            apenas_numeros = re.sub(r"\D", "", value)
+
+            # 2. Se a pessoa digitou 8 números (ex: "14092026")
+            if len(apenas_numeros) == 8:
+                dia = apenas_numeros[0:2]
+                mes = apenas_numeros[2:4]
+                ano = apenas_numeros[4:8]
+                return f"{ano}-{mes}-{dia}"
+
+        return value
         
