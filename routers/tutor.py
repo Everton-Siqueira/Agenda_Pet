@@ -159,4 +159,6 @@ def get_tutor_por_celular(celular: str):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao buscar tutor por celular: {str(e)}",        
+            detail=f"Erro ao buscar tutor por celular: {str(e)}", 
+
+        )      
