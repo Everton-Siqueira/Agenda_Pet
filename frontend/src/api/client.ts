@@ -24,6 +24,21 @@ export const api = axios.create({
   },
 });
 
+// Busca tutor pelo celular cadastrado
+export async function getTutorPorCelular(celular: string) {
+  // Remove parênteses, traços e espaços (envia apenas números)
+  const celularLimpo = celular.replace(/\D/g, "");
+  
+  const response = await api.get(`/tutor/celular/${celularLimpo}`);
+  return response.data;
+}
+
+// Lista todos os tutores
+export async function getTutores() {
+  const response = await api.get("/tutor");
+  return response.data;
+}
+
 export function getErrorMessage(error: unknown) {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<{ detail?: unknown }>;
