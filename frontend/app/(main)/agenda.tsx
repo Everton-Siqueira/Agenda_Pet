@@ -44,7 +44,6 @@ export default function AgendaScreen() {
         servicoApi.list(),
       ]);
       
-      // Ordenação corrigida sem palavras perdidas no meio
       const agendaOrdenada = [...agenda].sort((a, b) => {
         const dataA = `${a.data_atendimento} ${a.horario_atendimento}`;
         const dataB = `${b.data_atendimento} ${b.horario_atendimento}`;
@@ -73,69 +72,39 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
-  // Transforma AAAA-MM-DD do banco para DD/MM/AAAA na tela do usuário
+  // Apenas lê a data brasileira que o banco mandou e põe na caixa de texto
   function openEdit(item: Atendimento) {
     setEditingId(item.id);
-    
-    const dataPura = String(item.data_atendimento).slice(0, 10);
-    let dataFormatadaBr = "";
-
-    if (dataPura.includes("-")) {
-      const [ano, mes, dia] = dataPura.split("-");
-      dataFormatadaBr = `${dia}/${mes}/${ano}`;
-    } else {
-      dataFormatadaBr = dataPura;
-    }
-
-    const horarioPuro = String(item.horario_atendimento).slice(0, 5);
 
     setForm({
       id_pet: String(item.id_pet),
-      data_atendimento: dataFormatadaBr, 
-      horario_atendimento: horarioPuro,
+      data_atendimento: String(item.data_atendimento), 
+      horario_atendimento: String(item.horario_atendimento).slice(0, 5),
       id_servico: String(item.id_servico),
       valor: String(item.valor),
     });
     setFormOpen(true);
   }
 
-  // Valida e reconverte para o formato aceito pelo Pydantic (AAAA-MM-DD)
+  // Envia a string exatamente como o usuário digitou na tela para o Python tratar
   async function handleSave() {
     setError(null);
-
-    let dataDigitada = form.data_atendimento.trim();
-    let dataFormatadaParaPython = dataDigitada;
-
-    if (dataDigitada.includes("/")) {
-      const partes = dataDigitada.split("/");
-      if (partes.length === 3) {
-        const [dia, mes, ano] = partes;
-        dataFormatadaParaPython = `${ano}-${mes}-${dia}`;
-      }
-    } else {
-      const apenasNumeros = dataDigitada.replace(/\D/g, "");
-      if (apenasNumeros.length === 8) {
-        const dia = apenasNumeros.substring(0, 2);
-        const mes = apenasNumeros.substring(2, 4);
-        const ano = apenasNumeros.substring(4, 8);
-        dataFormatadaParaPython = `${ano}-${mes}-${dia}`;
-      }
-    }
+    setSaving(true);
 
     const payload = {
       id_pet: Number(form.id_pet),
-      data_atendimento: dataFormatadaParaPython, 
-      horario_atendimento: `${form.horario_atendimento.slice(0, 5)}:00`, 
+      data_atendimento: form.data_atendimento.trim(), 
+      horario_atendimento: form.horario_atendimento.slice(0, 5), 
       id_servico: Number(form.id_servico),
       valor: Number(String(form.valor).replace(",", ".")),
     };
 
     if (!payload.id_pet || !payload.id_servico || !payload.data_atendimento || !payload.valor) {
       setError("Preencha pet, serviço, data e valor corretamente.");
+      setSaving(false);
       return;
     }
 
-    setSaving(true);
     try {
       if (editingId) {
         await atendimentoApi.update(editingId, payload);
@@ -269,16 +238,16 @@ export default function AgendaScreen() {
                   </Text>
                 </View>
                 <View className="rounded-full bg-teal-50 px-3 py-1">
-                <Text className="text-xs font-semibold text-teal-800">
+                  <Text className="text-xs font-semibold text-teal-800">
                     {(() => {
                       const d = String(item.data_atendimento).slice(0, 10);
                       if (d.includes("-")) {
                         const [ano, mes, dia] = d.split("-");
                         return `${dia}/${mes}/${ano}`;
-                    }
-                    return d;
-                  })()} · {formatTime(String(item.horario_atendimento))}
-                </Text>
+                      }
+                      return d;
+                    })()} · {formatTime(String(item.horario_atendimento))}
+                  </Text>
                 </View>
               </View>
               <View className="flex-row gap-2">
