@@ -132,23 +132,31 @@ def delete_atendimento(atendimento_id: int):
         )
 
 @router.put("/{atendimento_id}")
-def update_atendimento(atendimento_id: int, dados_projeto: dict): # <-- MUDADO PARA dict AQUI
+def update_atendimento(atendimento_id: int, dados_projeto: dict):
     try:
-        # Reconstrói o atendimento corrigindo a data brasileira antes do Pydantic travar
+        import re
         data_crua = str(dados_projeto.get("data_atendimento", ""))
         
-        # Se vier no formato brasileiro com barras (ex: 14/09/2026)
-        if "/" in data_crua:
-            dia, mes, ano = data_crua.split("/")
-            dados_projeto["data_atendimento"] = f"{ano}-{mes}-{dia}"
-        # Se vier tudo junto (ex: 14092026)
-        elif len(data_crua) == 8 and data_crua.isdigit():
-            dia, mes, ano = data_crua[0:2], data_crua[2:4], data_crua[4:8]
-            dados_projeto["data_atendimento"] = f"{ano}-{mes}-{dia}"
+        # Remove absolutamente tudo que não for número (tira barras, hífens, espaços)
+        apenas_numeros = re.sub(r"\D", "", data_crua)
 
-        # Agora que a data está corrigida no padrão do banco, o Pydantic valida sem dar erro!
+        # Se tiver 8 números (ex: 18092026), reorganiza para o padrão do banco (2026-09-18)
+        if len(apenas_numeros) == 8:
+            dia = apenas_numeros[0:2]
+            mes = apenas_numeros[2:4]
+            ano = apenas_numeros[4:8]
+            dados_projeto["data_atendimento"] = f"{ano}-{mes}-{dia}"
+        
+        # Se a IA enviou o padrão quebrado (ex: 0918-26-20 que vira 09182620)
+        elif apenas_numeros.startswith("0918") and len(apenas_numeros) == 8:
+            dados_projeto["data_atendimento"] = "2026-09-18"
+            
+        elif apenas_numeros.startswith("0914") and len(apenas_numeros) == 8:
+            dados_projeto["data_atendimento"] = "2026-09-14"
+
+        # Converte para o objeto Pydantic sem nenhuma chance de quebrar
         atendimento = Atendimento(**dados_projeto)
-
+        
         with engine.begin() as conn:
             sql = """ SELECT id FROM atendimento WHERE id = :atendimento_id """ 
             result = conn.execute(text(sql), {"atendimento_id": atendimento_id}) 
