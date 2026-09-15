@@ -53,10 +53,6 @@ export const atendimentoApi = {
 };
 
 export const dashboardApi = {
-  resumo: () => api.get<DashboardResumo>("/dashboard").then((res) => res.data),
-  faturamento: () =>
-    api.get<FaturamentoConsolidado>("/dashboard/faturamento-consolidado").then((res) => res.data),
-  topTutores: () => api.get<TopTutor[]>("/dashboard/top-tutores").then((res) => res.data),
-  atendimentosPorDia: () =>
-    api.get<AtendimentosPorDia[]>("/dashboard/atendimentos-por-dia-semana").then((res) => res.data),
+  // Substitui as quatro chamadas antigas por uma única rota gerencial unificada
+  resumoCompleto: () => api.get<any>("/dashboard/resumo-gerencial").then((res) => res.data),
 };
