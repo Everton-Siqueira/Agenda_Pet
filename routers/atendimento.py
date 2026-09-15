@@ -154,7 +154,7 @@ def update_atendimento(atendimento_id: int, dados_projeto: dict):
         elif apenas_numeros.startswith("0914") and len(apenas_numeros) == 8:
             dados_projeto["data_atendimento"] = "2026-09-14"
 
-        # Converte para o objeto Pydantic sem nenhuma chance de quebrar
+        # Converte para o objeto Pydantic para rodar todas as suas validações de negócio
         atendimento = Atendimento(**dados_projeto)
         
         with engine.begin() as conn:
@@ -173,33 +173,49 @@ def update_atendimento(atendimento_id: int, dados_projeto: dict):
             if result.scalar() is None: 
                 raise HTTPException(status_code=404, detail="Serviço não encontrado.")
 
+            # Validação de duplicidade
+            sql = """ SELECT id FROM atendimento 
+                      WHERE id_pet = :id_pet 
+                      AND data_atendimento = :data_atendimento 
+                      AND horario_atendimento = :horario_atendimento 
+                      AND id <> :atendimento_id """
+            result = conn.execute(text(sql), {
+                "id_pet": atendimento.id_pet,
+                "data_atendimento": atendimento.data_atendimento.isoformat(),
+                "horario_atendimento": atendimento.horario_atendimento.isoformat(),
+                "atendimento_id": atendimento_id
+            })
+            if result.scalar() is not None:
+                raise HTTPException(status_code=400, detail="Já existe outro agendamento para este pet nesse horário.")
+
             sql = """UPDATE atendimento 
                     SET id_pet = :id_pet, data_atendimento = :data_atendimento, horario_atendimento = :horario_atendimento, id_servico = :id_servico, valor = :valor 
                     WHERE id = :atendimento_id"""
 
             dados = {
-                "id_pet": atendimento.id_pet,
-                "data_atendimento": atendimento.data_atendimento,
-                "horario_atendimento": atendimento.horario_atendimento,
-                "id_servico": atendimento.id_servico,
-                "valor": atendimento.valor,
-                "atendimento_id": atendimento_id
+                "id_pet": int(atendimento.id_pet),
+                "data_atendimento": atendimento.data_atendimento.isoformat(),      
+                "horario_atendimento": atendimento.horario_atendimento.isoformat(), 
+                "id_servico": int(atendimento.id_servico),
+                "valor": float(atendimento.valor),                                  
+                "atendimento_id": int(atendimento_id)
             }
             conn.execute(text(sql), dados)
 
         return {
             "id": atendimento_id,
             "id_pet": atendimento.id_pet,
-            "data_atendimento": atendimento.data_atendimento,
-            "horario_atendimento": atendimento.horario_atendimento,
+            "data_atendimento": atendimento.data_atendimento.isoformat(),
+            "horario_atendimento": atendimento.horario_atendimento.isoformat(),
             "id_servico": atendimento.id_servico,
-            "valor": atendimento.valor  
+            "valor": float(atendimento.valor)
         }        
             
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Erro interno do servidor.")
+        # ALTERADO: Agora o Python envia o erro real do banco/código para a faixa rosa do app!
+        raise HTTPException(status_code=500, detail=f"Erro no Backend: {str(e)}")
         
 
 @router.get("/{atendimento_id}")
