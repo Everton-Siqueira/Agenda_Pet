@@ -1,25 +1,36 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
-import { useFocusEffect, router } from "expo-router";
-import { API_BASE_URL, getErrorMessage } from "../../src/api/client";
+import { useFocusEffect } from "expo-router";
+import { API_URL, getErrorMessage } from "../../src/api/client"; // CORRIGIDO: Agora usa API_URL
 import { dashboardApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
-import { Button, Card, ErrorBanner } from "../../src/components/ui";
-import { useAuth } from "../../src/context/AuthContext";
+import { Card, ErrorBanner } from "../../src/components/ui";
 import { formatMoney } from "../../src/utils/format";
-import type {
-  AtendimentosPorDia,
-  DashboardResumo,
-  FaturamentoConsolidado,
-  TopTutor,
-} from "../../src/types";
+
+interface PeriodoMetricas {
+  hoje: number;
+  semana: number;
+  mes: number;
+  ano: number;
+}
+
+interface PeriodoFaturamento {
+  hoje: number;
+  semana: number;
+  mes: number;
+  ano: number;
+}
+
+interface NovaDashboardDados {
+  total_pets_cadastrados: number;
+  servicos: PeriodoMetricas;
+  atendimentos: PeriodoMetricas;
+  faturamento: PeriodoFaturamento;
+  ranking_pets: Array<{ nome_pet: string; total_visitas: number }>;
+}
 
 export default function DashboardScreen() {
-  const { session, logout } = useAuth();
-  const [resumo, setResumo] = useState<DashboardResumo | null>(null);
-  const [faturamento, setFaturamento] = useState<FaturamentoConsolidado | null>(null);
-  const [topTutores, setTopTutores] = useState<TopTutor[]>([]);
-  const [porDia, setPorDia] = useState<AtendimentosPorDia[]>([]);
+  const [dados, setDados] = useState<NovaDashboardDados | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,20 +38,8 @@ export default function DashboardScreen() {
     setError(null);
     setLoading(true);
     try {
-      const [resumoData, faturamentoData, dias] = await Promise.all([
-        dashboardApi.resumo(),
-        dashboardApi.faturamento(),
-        dashboardApi.atendimentosPorDia(),
-      ]);
-      setResumo(resumoData);
-      setFaturamento(faturamentoData);
-      setPorDia(dias);
-
-      try {
-        setTopTutores(await dashboardApi.topTutores());
-      } catch {
-        setTopTutores([]);
-      }
+      const resposta = await dashboardApi.resumoCompleto();
+      setDados(resposta);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -54,70 +53,51 @@ export default function DashboardScreen() {
     }, [load])
   );
 
-  async function handleLogout() {
-    await logout();
-    router.replace("/");
-  }
-
-  const sessionLabel =
-    session?.kind === "tutor" ? session.tutor.nome : session?.name ?? "Equipe";
-
   return (
-    <Screen
-      title="Painel"
-      subtitle={`Conectado como ${sessionLabel} · API ${API_BASE_URL}`}
-      loading={loading}
-      headerRight={
-        <View className="w-28">
-          <Button title="Sair" variant="secondary" onPress={handleLogout} />
-        </View>
-      }
-    >
+    <Screen title="Painel de Controle" subtitle={`Indicadores Gerenciais · API ${API_URL}`} loading={loading}>
       <ErrorBanner message={error} />
 
-      <View className="flex-row flex-wrap gap-3">
-        <Stat title="Pets" value={resumo?.total_pets ?? 0} />
-        <Stat title="Serviços" value={resumo?.total_servicos ?? 0} />
-        <Stat title="Atendimentos" value={resumo?.total_atendimentos ?? 0} />
+      <View className="rounded-3xl bg-teal-800 p-5 mb-4">
+        <Text className="text-sm text-teal-100 uppercase tracking-wider font-semibold">Total em Base</Text>
+        <Text className="mt-1 text-4xl font-bold text-white">{dados?.total_pets_cadastrados ?? 0} Pets Cadastrados</Text>
       </View>
 
-      <Card>
-        <Text className="text-lg font-semibold text-slate-900">Faturamento</Text>
-        <Text className="mt-2 text-3xl font-bold text-teal-800">
-          {formatMoney(faturamento?.resumo_geral.faturamento_total)}
-        </Text>
-        <Text className="mt-1 text-sm text-slate-500">
-          Ticket médio {formatMoney(faturamento?.resumo_geral.ticket_medio)}
-        </Text>
+      <Card className="gap-4">
+        <Text className="text-lg font-bold text-slate-900">Volumetria por Período</Text>
+        
+        <View className="border-b border-slate-100 pb-2 flex-row justify-between">
+          <Text className="font-semibold text-slate-400 text-xs w-[30%]">PERÍODO</Text>
+          <Text className="font-semibold text-slate-400 text-xs text-center flex-1">SERV. REALIZADOS</Text>
+          <Text className="font-semibold text-slate-400 text-xs text-right flex-1">ATENDIMENTOS</Text>
+        </View>
+
+        <TableRow periodo="Hoje" servicos={dados?.servicos.hoje ?? 0} atendimentos={dados?.atendimentos.hoje ?? 0} />
+        <TableRow periodo="Esta Semana" servicos={dados?.servicos.semana ?? 0} atendimentos={dados?.atendimentos.semana ?? 0} />
+        <TableRow periodo="Este Mês" servicos={dados?.servicos.mes ?? 0} atendimentos={dados?.atendimentos.mes ?? 0} />
+        <TableRow periodo="Este Ano" servicos={dados?.servicos.ano ?? 0} atendimentos={dados?.atendimentos.ano ?? 0} />
       </Card>
 
       <Card className="gap-3">
-        <Text className="text-lg font-semibold text-slate-900">Atendimentos por dia</Text>
-        {porDia.length === 0 ? (
-          <Text className="text-sm text-slate-500">Sem dados ainda.</Text>
-        ) : (
-          porDia.map((item) => (
-            <View key={item.dia_semana} className="flex-row justify-between">
-              <Text className="text-sm text-slate-600">{item.dia_semana}</Text>
-              <Text className="text-sm font-semibold text-slate-900">{item.total_atendimentos}</Text>
-            </View>
-          ))
-        )}
+        <Text className="text-lg font-bold text-slate-900">Controle de Recebimentos</Text>
+        <View className="gap-2 mt-1">
+          <FaturamentoRow titulo="Faturamento de Hoje" valor={dados?.faturamento.hoje ?? 0} destaque={true} />
+          <FaturamentoRow titulo="Acumulado da Semana" valor={dados?.faturamento.semana ?? 0} />
+          <FaturamentoRow titulo="Fechamento do Mês" valor={dados?.faturamento.mes ?? 0} />
+          <FaturamentoRow titulo="Consolidado do Ano" valor={dados?.faturamento.ano ?? 0} />
+        </View>
       </Card>
 
-      <Card className="gap-3">
-        <Text className="text-lg font-semibold text-slate-900">Top tutores</Text>
-        {topTutores.length === 0 ? (
-          <Text className="text-sm text-slate-500">
-            Sem ranking no momento. Se a rota /dashboard/top-tutores não responder, o restante do painel continua.
-          </Text>
+      <Card className="gap-3 mb-6">
+        <Text className="text-lg font-bold text-slate-900">🏆 Ranking de Assiduidade</Text>
+        {(!dados?.ranking_pets || dados.ranking_pets.length === 0) ? (
+          <Text className="text-sm text-slate-500 italic">Nenhum atendimento realizado.</Text>
         ) : (
-          topTutores.map((item, index) => (
-            <View key={`${item.nome_tutor}-${index}`} className="flex-row items-center justify-between">
-              <Text className="flex-1 text-sm text-slate-700">{item.nome_tutor ?? "Tutor"}</Text>
-              <Text className="text-sm font-semibold text-slate-900">
-                {item.total_agendamentos} · {formatMoney(item.total_gasto)}
+          dados.ranking_pets.map((item, index) => (
+            <View key={item.nome_pet} className="flex-row items-center justify-between py-1 border-b border-slate-50 border-dashed">
+              <Text className="text-sm text-slate-700">
+                <Text className="font-bold text-teal-800">{index + 1}º</Text> — {item.nome_pet}
               </Text>
+              <Text className="text-sm font-semibold text-slate-900">{item.total_visitas} visitas</Text>
             </View>
           ))
         )}
@@ -126,11 +106,21 @@ export default function DashboardScreen() {
   );
 }
 
-function Stat({ title, value }: { title: string; value: number }) {
+function TableRow({ periodo, servicos, atendimentos }: { periodo: string; servicos: number; atendimentos: number }) {
   return (
-    <View className="min-w-[30%] flex-1 rounded-3xl bg-teal-800 px-4 py-5">
-      <Text className="text-sm text-teal-100">{title}</Text>
-      <Text className="mt-2 text-3xl font-bold text-white">{value}</Text>
+    <View className="flex-row justify-between items-center py-1">
+      <Text className="text-sm font-medium text-slate-600 w-[30%]">{periodo}</Text>
+      <Text className="text-sm font-semibold text-slate-800 text-center flex-1">{servicos} itens</Text>
+      <Text className="text-sm font-semibold text-slate-800 text-right flex-1">{atendimentos} check-ins</Text>
+    </View>
+  );
+}
+
+function FaturamentoRow({ titulo, valor, destaque = false }: { titulo: string; valor: number; destaque?: boolean }) {
+  return (
+    <View className={`flex-row justify-between items-center py-2 px-3 rounded-xl ${destaque ? "bg-teal-50" : "bg-slate-50"}`}>
+      <Text className={`text-sm ${destaque ? "font-semibold text-teal-900" : "text-slate-600"}`}>{titulo}</Text>
+      <Text className={`text-base font-bold ${destaque ? "text-teal-800" : "text-slate-800"}`}>{formatMoney(valor)}</Text>
     </View>
   );
 }
