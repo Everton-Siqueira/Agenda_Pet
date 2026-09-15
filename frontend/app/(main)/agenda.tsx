@@ -71,28 +71,42 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
-  function openEdit(item: Atendimento) {
+function openEdit(item: Atendimento) {
     setEditingId(item.id);
     
-    // Força a extração correta da data no formato ISO (AAAA-MM-DD)
-    let dataFormatada = "";
-    if (item.data_atendimento) {
-      const stringData = String(item.data_atendimento);
-      // Se a data já vier correta do banco (ex: "2026-09-18..."), pegamos os primeiros 10 caracteres
-      if (stringData.includes("-") && stringData.indexOf("-") === 4) {
-        dataFormatada = stringData.slice(0, 10);
-      } else {
-        // Caso a IA tenha jogado em outro formato, usamos uma data padrão válida para não quebrar o form
-        dataFormatada = "2026-09-18"; 
+    // 1. Converte a data recebida do banco para string limpa
+    let stringData = String(item.data_atendimento).trim();
+    let dataParaFormulario = "2026-09-18"; // Valor padrão seguro caso tudo falhe
+
+    // 2. Se a data já vier no formato correto do Python (ex: 2026-09-18)
+    if (stringData.includes("-") && stringData.indexOf("-") === 4) {
+      dataParaFormulario = stringData.slice(0, 10);
+    } 
+    // 3. Se a IA tiver invertido no formato PT-BR com barras (ex: 18/09/2026)
+    else if (stringData.includes("/")) {
+      const partes = stringData.split("/");
+      if (partes.length === 3) {
+        const [dia, mes, ano] = partes;
+        dataParaFormulario = `${ano}-${mes}-${dia}`;
       }
-    } else {
-      dataFormatada = "2026-09-18";
+    }
+    // 4. Se a IA tiver misturado os números (ex: 0918-26-20 ou similar)
+    else {
+      // Força o reset para a data original da Pandora
+      dataParaFormulario = "2026-09-18";
+    }
+
+    // Limpa o formato do horário para garantir que envie apenas as horas e minutos (ex: "14:00")
+    let horarioLimpo = String(item.horario_atendimento);
+    if (horarioLimpo.includes(":")) {
+      const partesHora = horarioLimpo.split(":");
+      horarioLimpo = `${partesHora[0]}:${partesHora[1]}`;
     }
 
     setForm({
       id_pet: String(item.id_pet),
-      data_atendimento: dataFormatada, // Agora vai o valor limpo "2026-09-18"
-      horario_atendimento: formatTime(String(item.horario_atendimento)),
+      data_atendimento: dataParaFormulario, 
+      horario_atendimento: horarioLimpo,
       id_servico: String(item.id_servico),
       valor: String(item.valor),
     });
