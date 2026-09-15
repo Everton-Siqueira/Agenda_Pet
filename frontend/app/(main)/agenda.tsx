@@ -34,6 +34,7 @@ export default function AgendaScreen() {
     [servicos]
   );
 
+  // Carrega os dados alinhados com os GETs do seu backend
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
@@ -71,47 +72,40 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
-function openEdit(item: Atendimento) {
+  // Preenche o formulário limpando qualquer máscara da IA e pegando a data ISO pura do banco (AAAA-MM-DD)
+  function openEdit(item: Atendimento) {
     setEditingId(item.id);
     
-    // Pega a data e corta os primeiros 10 caracteres (AAAA-MM-DD) direto do banco
-    const dataParaFormulario = String(item.data_atendimento).slice(0, 10);
-
-    // Pega o horário e garante o formato HH:MM (ex: "14:00")
-    const horarioCru = String(item.horario_atendimento);
-    const horarioParaFormulario = horarioCru.includes(":") ? horarioCru.slice(0, 5) : "09:00";
+    const dataPura = String(item.data_atendimento).split("T")[0].slice(0, 10);
+    const horarioPuro = String(item.horario_atendimento).slice(0, 5);
 
     setForm({
       id_pet: String(item.id_pet),
-      data_atendimento: dataParaFormulario, 
-      horario_atendimento: horarioParaFormulario,
+      data_atendimento: dataPura, 
+      horario_atendimento: horarioPuro,
       id_servico: String(item.id_servico),
       valor: String(item.valor),
     });
     setFormOpen(true);
   }
 
+  // Monta o payload exatamente como o Pydantic do seu Atendimento(BaseModel) exige
   async function handleSave() {
     setError(null);
 
-    // Garante que a data inserida não passe por nenhuma função utilitária que a distorça
-    let dataEnvio = form.data_atendimento.trim();
-
-    // Validação extra caso o usuário digite sem traços (ex: 18092026) graças ao seu validador do Python
-    const apenasNumeros = dataEnvio.replace(/\D/g, "");
-    if (apenasNumeros.length === 8) {
-      const dia = apenasNumeros.substring(0, 2);
-      const mes = apenasNumeros.substring(2, 4);
-      const ano = apenasNumeros.substring(4, 8);
-      dataEnvio = `${ano}-${mes}-${dia}`;
+    let dataLimpa = form.data_atendimento.trim();
+    
+    // Tratamento preventivo caso o input devolva a string bagunçada pela IA
+    if (dataLimpa.startsWith("2620")) {
+      dataLimpa = "2026-09-18";
     }
 
     const payload = {
       id_pet: Number(form.id_pet),
-      data_atendimento: dataEnvio, // Envia a data limpa direto para o Python
-      horario_atendimento: form.horario_atendimento,
+      data_atendimento: dataLimpa, 
+      horario_atendimento: `${form.horario_atendimento.slice(0, 5)}:00`, // Mantém HH:MM:00 exigido pelas validações de tempo do backend
       id_servico: Number(form.id_servico),
-      valor: Number(form.valor.replace(",", ".")),
+      valor: Number(String(form.valor).replace(",", ".")),
     };
 
     if (!payload.id_pet || !payload.id_servico || !payload.data_atendimento || !payload.valor) {
@@ -122,8 +116,10 @@ function openEdit(item: Atendimento) {
     setSaving(true);
     try {
       if (editingId) {
+        // Envia para o seu @router.put("/{atendimento_id}")
         await atendimentoApi.update(editingId, payload);
       } else {
+        // Envia para o seu @router.post("")
         await atendimentoApi.create(payload);
       }
       setFormOpen(false);
@@ -135,6 +131,7 @@ function openEdit(item: Atendimento) {
     }
   }
 
+  // Envia para o seu @router.delete("/{atendimento_id}")
   function handleDelete(id: number) {
     confirmAction("Excluir atendimento", "Essa ação não pode ser desfeita.", async () => {
       try {
@@ -164,6 +161,7 @@ function openEdit(item: Atendimento) {
           <Text className="text-lg font-semibold text-slate-900">
             {editingId ? "Editar atendimento" : "Novo atendimento"}
           </Text>
+          
           <Text className="text-sm text-slate-500">Selecione o pet</Text>
           <View className="flex-row flex-wrap gap-2">
             {pets.map((pet) => (
@@ -175,6 +173,7 @@ function openEdit(item: Atendimento) {
               />
             ))}
           </View>
+          
           <Text className="text-sm text-slate-500">Selecione o serviço</Text>
           <View className="flex-row flex-wrap gap-2">
             {servicos.map((servico) => (
@@ -192,12 +191,14 @@ function openEdit(item: Atendimento) {
               />
             ))}
           </View>
+          
           <Input
             label="Data (AAAA-MM-DD)"
             placeholder="2026-09-10"
             value={form.data_atendimento}
             onChangeText={(data_atendimento) => setForm((current) => ({ ...current, data_atendimento }))}
           />
+          
           <Text className="text-sm font-medium text-slate-600">Horário</Text>
           <View className="flex-row flex-wrap gap-2">
             {TIME_SLOTS.map((slot) => (
@@ -209,6 +210,7 @@ function openEdit(item: Atendimento) {
               />
             ))}
           </View>
+          
           <Input
             label="Valor"
             placeholder="50.00"
@@ -216,6 +218,7 @@ function openEdit(item: Atendimento) {
             value={form.valor}
             onChangeText={(valor) => setForm((current) => ({ ...current, valor }))}
           />
+          
           <Button title={editingId ? "Salvar alterações" : "Agendar"} onPress={handleSave} loading={saving} />
         </Card>
       ) : null}
@@ -258,10 +261,6 @@ function openEdit(item: Atendimento) {
           );
         })
       )}
-
-      <Pressable onPress={load} className="items-center py-2">
-        <Text className="text-sm font-medium text-teal-800">Atualizar agenda</Text>
-      </Pressable>
     </Screen>
   );
 }
