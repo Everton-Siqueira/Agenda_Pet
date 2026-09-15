@@ -175,21 +175,10 @@ def get_atendimento(atendimento_id: int):
         )
 
 
-# ROTA PUT ADICIONADA: Processa a alteração entendendo a data brasileira (DD/MM/AAAA)
 @router.put("/{atendimento_id}")
 def update_atendimento(atendimento_id: int, dados_projeto: dict):
     try:
-        data_crua = str(dados_projeto.get("data_atendimento", "")).strip()
-        apenas_numeros = re.sub(r"\D", "", data_crua)
-
-        if len(apenas_numeros) == 8:
-            dia = apenas_numeros[0:2]
-            mes = apenas_numeros[2:4]
-            ano = apenas_numeros[4:8]
-            dados_projeto["data_atendimento"] = f"{ano}-{mes}-{dia}"
-        else:
-            raise HTTPException(status_code=400, detail="Formato de data inválido. Use DD/MM/AAAA.")
-
+        # A classe Atendimento agora tratará de forma nativa e segura no field_validator
         atendimento = Atendimento(**dados_projeto)
         
         with engine.begin() as conn:
