@@ -88,7 +88,7 @@ export default function AgendaScreen() {
     const payload = {
       id_pet: Number(form.id_pet),
       data_atendimento: form.data_atendimento,
-      horario_atendimento: `${form.horario_atendimento}:00`,
+      horario_atendimento: form.horario_atendimento,
       id_servico: Number(form.id_servico),
       valor: Number(form.valor.replace(",", ".")),
     };
