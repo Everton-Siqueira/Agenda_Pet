@@ -131,10 +131,9 @@ export default function TutoresScreen() {
         /* Barra de pesquisa inteligente por nome/iniciais (só aparece se o formulário estiver fechado) */
         <View className="mb-4">
           <Input
-            placeholder="🔍 Procurar contato do tutor..."
-            value={busca}
-            onChangeText={setBusca}
-          />
+              placeholder="🔍 Procurar contato do tutor..."
+              value={busca}
+              onChangeText={setBusca} label={""}          />
         </View>
       )}
 
