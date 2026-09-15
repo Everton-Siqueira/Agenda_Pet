@@ -73,9 +73,14 @@ export default function AgendaScreen() {
 
   function openEdit(item: Atendimento) {
     setEditingId(item.id);
+    
+    // Força a data a ficar no formato correto AAAA-MM-DD para o input
+    const dataCrua = String(item.data_atendimento);
+    const dataFormatada = dataCrua.includes("T") ? dataCrua.split("T")[0] : dataCrua;
+
     setForm({
       id_pet: String(item.id_pet),
-      data_atendimento: String(item.data_atendimento).slice(0, 10),
+      data_atendimento: dataFormatada, 
       horario_atendimento: formatTime(String(item.horario_atendimento)),
       id_servico: String(item.id_servico),
       valor: String(item.valor),
