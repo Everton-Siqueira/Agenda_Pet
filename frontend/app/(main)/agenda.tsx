@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, TextInput } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { atendimentoApi, petApi, servicoApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
-import { Button, Card, Chip, EmptyState, ErrorBanner, Input } from "../../src/components/ui";
+import { Button, Card, Chip, EmptyState, ErrorBanner } from "../../src/components/ui";
 import { confirmAction } from "../../src/utils/confirm";
 import { formatDate, formatMoney, formatTime, TIME_SLOTS } from "../../src/utils/format";
 import type { Atendimento, Pet, Servico } from "../../src/types";
@@ -34,7 +34,6 @@ export default function AgendaScreen() {
     [servicos]
   );
 
-  // Carrega os dados alinhados com os GETs do seu backend
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
@@ -72,16 +71,25 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
-  // Preenche o formulário limpando qualquer máscara da IA e pegando a data ISO pura do banco (AAAA-MM-DD)
+  // Transforma AAAA-MM-DD do banco para DD/MM/AAAA na tela do usuário
   function openEdit(item: Atendimento) {
     setEditingId(item.id);
     
-    const dataPura = String(item.data_atendimento).split("T")[0].slice(0, 10);
+    const dataPura = String(item.data_atendimento).slice(0, 10);
+    let dataFormatadaBr = "";
+
+    if (dataPura.includes("-")) {
+      const [ano, mes, dia] = dataPura.split("-");
+      dataFormatadaBr = `${dia}/${mes}/${ano}`;
+    } else {
+      dataFormatadaBr = dataPura;
+    }
+
     const horarioPuro = String(item.horario_atendimento).slice(0, 5);
 
     setForm({
       id_pet: String(item.id_pet),
-      data_atendimento: dataPura, 
+      data_atendimento: dataFormatadaBr, 
       horario_atendimento: horarioPuro,
       id_servico: String(item.id_servico),
       valor: String(item.valor),
@@ -89,37 +97,47 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
-  // Monta o payload exatamente como o Pydantic do seu Atendimento(BaseModel) exige
+  // Valida e reconverte para o formato aceito pelo Pydantic (AAAA-MM-DD)
   async function handleSave() {
     setError(null);
 
-    let dataLimpa = form.data_atendimento.trim();
-    
-    // Tratamento preventivo caso o input devolva a string bagunçada pela IA
-    if (dataLimpa.startsWith("2620")) {
-      dataLimpa = "2026-09-18";
+    let dataDigitada = form.data_atendimento.trim();
+    let dataFormatadaParaPython = dataDigitada;
+
+    if (dataDigitada.includes("/")) {
+      const partes = dataDigitada.split("/");
+      if (partes.length === 3) {
+        const [dia, mes, ano] = partes;
+        dataFormatadaParaPython = `${ano}-${mes}-${dia}`;
+      }
+    } else {
+      const apenasNumeros = dataDigitada.replace(/\D/g, "");
+      if (apenasNumeros.length === 8) {
+        const dia = apenasNumeros.substring(0, 2);
+        const mes = apenasNumeros.substring(2, 4);
+        const ano = apenasNumeros.substring(4, 8);
+        dataFormatadaParaPython = `${ano}-${mes}-${dia}`;
+      }
     }
 
     const payload = {
       id_pet: Number(form.id_pet),
-      data_atendimento: dataLimpa, 
-      horario_atendimento: `${form.horario_atendimento.slice(0, 5)}:00`, // Mantém HH:MM:00 exigido pelas validações de tempo do backend
+      data_atendimento: dataFormatadaParaPython, 
+      horario_atendimento: `${form.horario_atendimento.slice(0, 5)}:00`, 
       id_servico: Number(form.id_servico),
       valor: Number(String(form.valor).replace(",", ".")),
     };
 
     if (!payload.id_pet || !payload.id_servico || !payload.data_atendimento || !payload.valor) {
-      setError("Preencha pet, serviço, data e valor.");
+      setError("Preencha pet, serviço, data e valor corretamente.");
       return;
     }
 
     setSaving(true);
     try {
       if (editingId) {
-        // Envia para o seu @router.put("/{atendimento_id}")
         await atendimentoApi.update(editingId, payload);
       } else {
-        // Envia para o seu @router.post("")
         await atendimentoApi.create(payload);
       }
       setFormOpen(false);
@@ -131,7 +149,6 @@ export default function AgendaScreen() {
     }
   }
 
-  // Envia para o seu @router.delete("/{atendimento_id}")
   function handleDelete(id: number) {
     confirmAction("Excluir atendimento", "Essa ação não pode ser desfeita.", async () => {
       try {
@@ -146,7 +163,7 @@ export default function AgendaScreen() {
   return (
     <Screen
       title="Agenda de pets"
-      subtitle="Atendimentos da API /atendimento. Horários válidos: 09:00 às 18:00."
+      subtitle="Gerenciamento interno de atendimentos."
       loading={loading}
       headerRight={
         <View className="w-32">
@@ -192,12 +209,15 @@ export default function AgendaScreen() {
             ))}
           </View>
           
-          <Input
-            label="Data (AAAA-MM-DD)"
-            placeholder="2026-09-10"
-            value={form.data_atendimento}
-            onChangeText={(data_atendimento) => setForm((current) => ({ ...current, data_atendimento }))}
-          />
+          <View className="gap-1">
+            <Text className="text-sm font-medium text-slate-600">Data (DD/MM/AAAA)</Text>
+            <TextInput
+              style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#ffffff' }}
+              placeholder="18/09/2026 ou 18092026"
+              value={form.data_atendimento}
+              onChangeText={(txt) => setForm((current) => ({ ...current, data_atendimento: txt }))}
+            />
+          </View>
           
           <Text className="text-sm font-medium text-slate-600">Horário</Text>
           <View className="flex-row flex-wrap gap-2">
@@ -211,13 +231,16 @@ export default function AgendaScreen() {
             ))}
           </View>
           
-          <Input
-            label="Valor"
-            placeholder="50.00"
-            keyboardType="decimal-pad"
-            value={form.valor}
-            onChangeText={(valor) => setForm((current) => ({ ...current, valor }))}
-          />
+          <View className="gap-1">
+            <Text className="text-sm font-medium text-slate-600">Valor</Text>
+            <TextInput
+              style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#ffffff' }}
+              placeholder="70.00"
+              keyboardType="decimal-pad"
+              value={form.valor}
+              onChangeText={(txt) => setForm((current) => ({ ...current, valor: txt }))}
+            />
+          </View>
           
           <Button title={editingId ? "Salvar alterações" : "Agendar"} onPress={handleSave} loading={saving} />
         </Card>
