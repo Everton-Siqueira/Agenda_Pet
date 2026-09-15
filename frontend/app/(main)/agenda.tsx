@@ -43,13 +43,15 @@ export default function AgendaScreen() {
         petApi.list(),
         servicoApi.list(),
       ]);
-      setAtendimentos(
-        [...agenda].sort((a, b) =>
-          `${b.data_atendimento}${b.horario_atendimento}`.localeCompare(
-            `${a.data_atendimento}${a.horario_atendimento}`
-          )
-        )
-      );
+      
+      // Ordenação corrigida sem palavras perdidas no meio
+      const agendaOrdenada = [...agenda].sort((a, b) => {
+        const dataA = `${a.data_atendimento} ${a.horario_atendimento}`;
+        const dataB = `${b.data_atendimento} ${b.horario_atendimento}`;
+        return dataB.localeCompare(dataA);
+      });
+
+      setAtendimentos(agendaOrdenada);
       setPets(petList);
       setServicos(servicoList);
     } catch (err) {
