@@ -22,3 +22,13 @@ export const api = axios.create({
   },
 });
 
+export function getErrorMessage(error: any): string {
+  if (error?.response?.data) {
+    const data = error.response.data;
+    if (typeof data === 'string') return data;
+    // Trata o padrão 'detail' muito comum no FastAPI/Python
+    if (data.detail) return typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+    if (data.message) return data.message;
+  }
+  return error?.message || "Ocorreu um erro inesperado.";
+}
