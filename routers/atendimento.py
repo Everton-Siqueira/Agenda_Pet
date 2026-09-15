@@ -146,91 +146,34 @@ def delete_atendimento(atendimento_id: int):
             detail="Erro interno do servidor."
         )
 
-@router.put("/{atendimento_id}")
-def update_atendimento(atendimento_id: int, dados_projeto: dict):
+@router.get("")
+def get_atendimentos():  
     try:
-        import re
-        data_crua = str(dados_projeto.get("data_atendimento", ""))
-        
-        # Remove absolutamente tudo que não for número (tira barras, hífens, espaços)
-        apenas_numeros = re.sub(r"\D", "", data_crua)
-
-        # Se tiver 8 números (ex: 18092026), reorganiza para o padrão do banco (2026-09-18)
-        if len(apenas_numeros) == 8:
-            dia = apenas_numeros[0:2]
-            mes = apenas_numeros[2:4]
-            ano = apenas_numeros[4:8]
-            dados_projeto["data_atendimento"] = f"{ano}-{mes}-{dia}"
-        
-        # Se a IA enviou o padrão quebrado (ex: 0918-26-20 que vira 09182620)
-        elif apenas_numeros.startswith("0918") and len(apenas_numeros) == 8:
-            dados_projeto["data_atendimento"] = "2026-09-18"
+        with engine.connect() as conn:
+            # Mudamos o SELECT * para formatar a data diretamente via banco de dados (PostgreSQL/SQLite)
+            # Se o seu banco for SQLite, use: strftime('%d/%m/%Y', data_atendimento)
+            # Se for PostgreSQL/MySQL, use: TO_CHAR(data_atendimento, 'DD/MM/YYYY')
+            # Abaixo uma forma compatível que funciona convertendo no Python para garantir:
+            sql = """SELECT id, id_pet, data_atendimento, horario_atendimento, id_servico, valor FROM atendimento"""
+            result = conn.execute(text(sql))
             
-        elif apenas_numeros.startswith("0914") and len(apenas_numeros) == 8:
-            dados_projeto["data_atendimento"] = "2026-09-14"
-
-        # Converte para o objeto Pydantic para rodar todas as suas validações de negócio
-        atendimento = Atendimento(**dados_projeto)
-        
-        with engine.begin() as conn:
-            sql = """ SELECT id FROM atendimento WHERE id = :atendimento_id """ 
-            result = conn.execute(text(sql), {"atendimento_id": atendimento_id}) 
-            if result.scalar() is None: 
-                raise HTTPException(status_code=404, detail="Atendimento não encontrado.")
-
-            sql = """ SELECT id FROM pet WHERE id = :id_pet """ 
-            result = conn.execute(text(sql), {"id_pet": atendimento.id_pet}) 
-            if result.scalar() is None: 
-                raise HTTPException(status_code=404, detail="Pet não encontrado.")
-
-            sql = """ SELECT id FROM servico WHERE id = :id_servico """ 
-            result = conn.execute(text(sql), {"id_servico": atendimento.id_servico}) 
-            if result.scalar() is None: 
-                raise HTTPException(status_code=404, detail="Serviço não encontrado.")
-
-            # Validação de duplicidade
-            sql = """ SELECT id FROM atendimento 
-                      WHERE id_pet = :id_pet 
-                      AND data_atendimento = :data_atendimento 
-                      AND horario_atendimento = :horario_atendimento 
-                      AND id <> :atendimento_id """
-            result = conn.execute(text(sql), {
-                "id_pet": atendimento.id_pet,
-                "data_atendimento": atendimento.data_atendimento.isoformat(),
-                "horario_atendimento": atendimento.horario_atendimento.isoformat(),
-                "atendimento_id": atendimento_id
-            })
-            if result.scalar() is not None:
-                raise HTTPException(status_code=400, detail="Já existe outro agendamento para este pet nesse horário.")
-
-            sql = """UPDATE atendimento 
-                    SET id_pet = :id_pet, data_atendimento = :data_atendimento, horario_atendimento = :horario_atendimento, id_servico = :id_servico, valor = :valor 
-                    WHERE id = :atendimento_id"""
-
-            dados = {
-                "id_pet": int(atendimento.id_pet),
-                "data_atendimento": atendimento.data_atendimento.isoformat(),      
-                "horario_atendimento": atendimento.horario_atendimento.isoformat(), 
-                "id_servico": int(atendimento.id_servico),
-                "valor": float(atendimento.valor),                                  
-                "atendimento_id": int(atendimento_id)
-            }
-            conn.execute(text(sql), dados)
-
-        return {
-            "id": atendimento_id,
-            "id_pet": atendimento.id_pet,
-            "data_atendimento": atendimento.data_atendimento.isoformat(),
-            "horario_atendimento": atendimento.horario_atendimento.isoformat(),
-            "id_servico": atendimento.id_servico,
-            "valor": float(atendimento.valor)
-        }        
-            
-    except HTTPException:
-        raise
+            atendimentos = []
+            for row in result:
+                item = dict(row._mapping)
+                # Converte o objeto date que veio do banco para o formato brasileiro visível
+                if item.get("data_atendimento"):
+                    from datetime import date
+                    if isinstance(item["data_atendimento"], date):
+                        item["data_atendimento"] = item["data_atendimento"].strftime("%d/%m/%Y")
+                    elif isinstance(item["data_atendimento"], str) and "-" in item["data_atendimento"]:
+                        ano, mes, dia = item["data_atendimento"].split("-")
+                        item["data_atendimento"] = f"{dia}/{mes}/{ano}"
+                atendimentos.append(item)
+                
+            return atendimentos
     except Exception as e:
-        # ALTERADO: Agora o Python envia o erro real do banco/código para a faixa rosa do app!
-        raise HTTPException(status_code=500, detail=f"Erro no Backend: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erro ao listar: {str(e)}")
+
         
 
 @router.get("/{atendimento_id}")
