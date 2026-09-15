@@ -101,9 +101,22 @@ export default function AgendaScreen() {
 
   async function handleSave() {
     setError(null);
+
+    // Garante que a data inserida não passe por nenhuma função utilitária que a distorça
+    let dataEnvio = form.data_atendimento.trim();
+
+    // Validação extra caso o usuário digite sem traços (ex: 18092026) graças ao seu validador do Python
+    const apenasNumeros = dataEnvio.replace(/\D/g, "");
+    if (apenasNumeros.length === 8) {
+      const dia = apenasNumeros.substring(0, 2);
+      const mes = apenasNumeros.substring(2, 4);
+      const ano = apenasNumeros.substring(4, 8);
+      dataEnvio = `${ano}-${mes}-${dia}`;
+    }
+
     const payload = {
       id_pet: Number(form.id_pet),
-      data_atendimento: form.data_atendimento,
+      data_atendimento: dataEnvio, // Envia a data limpa direto para o Python
       horario_atendimento: form.horario_atendimento,
       id_servico: Number(form.id_servico),
       valor: Number(form.valor.replace(",", ".")),
