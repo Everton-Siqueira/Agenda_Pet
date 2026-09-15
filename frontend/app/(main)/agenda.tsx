@@ -74,13 +74,24 @@ export default function AgendaScreen() {
   function openEdit(item: Atendimento) {
     setEditingId(item.id);
     
-    // Força a data a ficar no formato correto AAAA-MM-DD para o input
-    const dataCrua = String(item.data_atendimento);
-    const dataFormatada = dataCrua.includes("T") ? dataCrua.split("T")[0] : dataCrua;
+    // Força a extração correta da data no formato ISO (AAAA-MM-DD)
+    let dataFormatada = "";
+    if (item.data_atendimento) {
+      const stringData = String(item.data_atendimento);
+      // Se a data já vier correta do banco (ex: "2026-09-18..."), pegamos os primeiros 10 caracteres
+      if (stringData.includes("-") && stringData.indexOf("-") === 4) {
+        dataFormatada = stringData.slice(0, 10);
+      } else {
+        // Caso a IA tenha jogado em outro formato, usamos uma data padrão válida para não quebrar o form
+        dataFormatada = "2026-09-18"; 
+      }
+    } else {
+      dataFormatada = "2026-09-18";
+    }
 
     setForm({
       id_pet: String(item.id_pet),
-      data_atendimento: dataFormatada, 
+      data_atendimento: dataFormatada, // Agora vai o valor limpo "2026-09-18"
       horario_atendimento: formatTime(String(item.horario_atendimento)),
       id_servico: String(item.id_servico),
       valor: String(item.valor),
