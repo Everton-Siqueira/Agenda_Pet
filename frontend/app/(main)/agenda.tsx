@@ -4,7 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { atendimentoApi, petApi, servicoApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
-import { Button, Card, Chip, EmptyState, ErrorBanner } from "../../src/components/ui";
+import { Button, Card, Chip, EmptyState, ErrorBanner, Input } from "../../src/components/ui";
 import { confirmAction } from "../../src/utils/confirm";
 import { formatDate, formatMoney, formatTime, TIME_SLOTS } from "../../src/utils/format";
 import type { Atendimento, Pet, Servico } from "../../src/types";
@@ -27,12 +27,23 @@ export default function AgendaScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [busca, setBusca] = useState(""); // Estado para controlar a pesquisa na agenda
 
   const petMap = useMemo(() => new Map(pets.map((pet) => [pet.id, pet])), [pets]);
   const servicoMap = useMemo(
     () => new Map(servicos.map((servico) => [servico.id, servico])),
     [servicos]
   );
+
+  // Organiza a listagem de pets por ordem alfabética para o formulário
+  const petsOrdenados = useMemo(() => {
+    return [...pets].sort((a, b) => a.nome_pet.localeCompare(b.nome_pet));
+  }, [pets]);
+
+  // Organiza a listagem de serviços por ordem alfabética para o formulário
+  const servicosOrdenados = useMemo(() => {
+    return [...servicos].sort((a, b) => a.tipo_servico.localeCompare(b.tipo_servico));
+  }, [servicos]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -72,7 +83,6 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
-  // Apenas lê a data brasileira que o banco mandou e põe na caixa de texto
   function openEdit(item: Atendimento) {
     setEditingId(item.id);
 
@@ -86,7 +96,6 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
-  // Envia a string exatamente como o usuário digitou na tela para o Python tratar
   async function handleSave() {
     setError(null);
     setSaving(true);
@@ -131,6 +140,15 @@ export default function AgendaScreen() {
     });
   }
 
+  // Filtra os agendamentos permitindo buscar tanto pelo nome do pet quanto pelo tipo do serviço
+  const atendimentosFiltrados = atendimentos.filter((item) => {
+    const nomePet = petMap.get(item.id_pet)?.nome_pet?.toLowerCase() ?? "";
+    const tipoServico = servicoMap.get(item.id_servico)?.tipo_servico?.toLowerCase() ?? "";
+    const termoBusca = busca.toLowerCase();
+
+    return nomePet.includes(termoBusca) || tipoServico.includes(termoBusca);
+  });
+
   return (
     <Screen
       title="Agenda de pets"
@@ -142,6 +160,7 @@ export default function AgendaScreen() {
         </View>
       }
     >
+    
       <ErrorBanner message={error} />
 
       {formOpen ? (
@@ -150,9 +169,9 @@ export default function AgendaScreen() {
             {editingId ? "Editar atendimento" : "Novo atendimento"}
           </Text>
           
-          <Text className="text-sm text-slate-500">Selecione o pet</Text>
+          <Text className="text-sm text-slate-500">Selecione o pet (A-Z)</Text>
           <View className="flex-row flex-wrap gap-2">
-            {pets.map((pet) => (
+            {petsOrdenados.map((pet) => (
               <Chip
                 key={pet.id}
                 label={`${pet.nome_pet} (#${pet.id})`}
@@ -162,9 +181,9 @@ export default function AgendaScreen() {
             ))}
           </View>
           
-          <Text className="text-sm text-slate-500">Selecione o serviço</Text>
+          <Text className="text-sm text-slate-500">Selecione o serviço (A-Z)</Text>
           <View className="flex-row flex-wrap gap-2">
-            {servicos.map((servico) => (
+            {servicosOrdenados.map((servico) => (
               <Chip
                 key={servico.id}
                 label={`${servico.tipo_servico} (${formatMoney(servico.valor)})`}
@@ -215,51 +234,52 @@ export default function AgendaScreen() {
           
           <Button title={editingId ? "Salvar alterações" : "Agendar"} onPress={handleSave} loading={saving} />
         </Card>
-      ) : null}
+      ) : (
+        /* Barra de pesquisa inteligente para Agenda (Filtra por Pet ou Serviço) */
+        <View className="mb-4">
+          <Input
+              placeholder="🔍 Buscar agendamento por pet ou serviço..."
+              value={busca}
+              onChangeText={setBusca} label={""}          />
+        </View>
+      )}
 
       {atendimentos.length === 0 ? (
         <EmptyState
           title="Nenhum atendimento ainda"
           subtitle="Cadastre um pet e um serviço, depois crie o primeiro horário na agenda."
         />
+      ) : atendimentosFiltrados.length === 0 ? (
+        /* Estado vazio quando a busca não encontra correspondências na agenda */
+        <EmptyState title="Nenhum agendamento encontrado" subtitle="Verifique os termos digitados e tente novamente." />
       ) : (
-        atendimentos.map((item) => {
+        /* Renderização da lista cronológica filtrada dinamicamente */
+        atendimentosFiltrados.map((item) => {
           const pet = petMap.get(item.id_pet);
           const servico = servicoMap.get(item.id_servico);
           return (
-            <Card key={item.id} className="gap-3">
+            <Card key={item.id} className="gap-3 mb-3">
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1">
                   <Text className="text-lg font-semibold text-slate-900">
                     {pet?.nome_pet ?? `Pet #${item.id_pet}`}
                   </Text>
-                  <Text className="mt-1 text-sm text-slate-500">
-                    {servico?.tipo_servico ?? `Serviço #${item.id_servico}`} · {formatMoney(item.valor)}
+                  <Text className="text-sm text-slate-500">
+                    {servico?.tipo_servico ?? `Serviço #${item.id_servico}`}
+                  </Text>
+                  <Text className="text-sm text-slate-500">
+
+                    {item.data_atendimento} às {item.horario_atendimento.slice(0, 5)}
                   </Text>
                 </View>
-                <View className="rounded-full bg-teal-50 px-3 py-1">
-                  <Text className="text-xs font-semibold text-teal-800">
-                    {(() => {
-                      const d = String(item.data_atendimento).slice(0, 10);
-                      if (d.includes("-")) {
-                        const [ano, mes, dia] = d.split("-");
-                        return `${dia}/${mes}/${ano}`;
-                      }
-                      return d;
-                    })()} · {formatTime(String(item.horario_atendimento))}
-                  </Text>
+                <View className="flex-row gap-2">
+                  
                 </View>
-              </View>
-              <View className="flex-row gap-2">
-                <View className="flex-1">
-                  <Button title="Editar" variant="secondary" onPress={() => openEdit(item)} />
-                </View>
-                <View className="flex-1">
-                  <Button title="Excluir" variant="danger" onPress={() => handleDelete(item.id)} />
-                </View>
+                  <Button title="Editar" variant="secondary" onPress={() => openEdit(item)}/>
+                  <Button title="Excluir" variant="danger" onPress={() => handleDelete(item.id)}/>
               </View>
             </Card>
-          );
+           );
         })
       )}
     </Screen>
