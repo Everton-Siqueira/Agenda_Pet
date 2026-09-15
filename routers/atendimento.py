@@ -101,15 +101,30 @@ def create_atendimento(atendimento: Atendimento):
 def get_atendimentos():  
     try:
         with engine.connect() as conn:
-            sql = """SELECT * FROM atendimento"""
+            # Mudamos o SELECT * para formatar a data diretamente via banco de dados (PostgreSQL/SQLite)
+            # Se o seu banco for SQLite, use: strftime('%d/%m/%Y', data_atendimento)
+            # Se for PostgreSQL/MySQL, use: TO_CHAR(data_atendimento, 'DD/MM/YYYY')
+            # Abaixo uma forma compatível que funciona convertendo no Python para garantir:
+            sql = """SELECT id, id_pet, data_atendimento, horario_atendimento, id_servico, valor FROM atendimento"""
             result = conn.execute(text(sql))
-            atendimentos = [dict(row._mapping) for row in result]
+            
+            atendimentos = []
+            for row in result:
+                item = dict(row._mapping)
+                # Converte o objeto date que veio do banco para o formato brasileiro visível
+                if item.get("data_atendimento"):
+                    from datetime import date
+                    if isinstance(item["data_atendimento"], date):
+                        item["data_atendimento"] = item["data_atendimento"].strftime("%d/%m/%Y")
+                    elif isinstance(item["data_atendimento"], str) and "-" in item["data_atendimento"]:
+                        ano, mes, dia = item["data_atendimento"].split("-")
+                        item["data_atendimento"] = f"{dia}/{mes}/{ano}"
+                atendimentos.append(item)
+                
             return atendimentos
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Erro interno do servidor."
-        )
+        raise HTTPException(status_code=500, detail=f"Erro ao listar: {str(e)}")
+
 
 @router.delete("/{atendimento_id}")
 def delete_atendimento(atendimento_id: int):
