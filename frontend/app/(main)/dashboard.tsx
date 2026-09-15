@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { API_URL, getErrorMessage } from "../../src/api/client"; // CORRIGIDO: Agora usa API_URL
+import { API_URL, getErrorMessage } from "../../src/api/client";
 import { dashboardApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
 import { Card, ErrorBanner } from "../../src/components/ui";
@@ -14,6 +14,13 @@ interface PeriodoMetricas {
   ano: number;
 }
 
+interface PeriodoServicos {
+  hoje: string;
+  semana: string;
+  mes: string;
+  ano: string;
+}
+
 interface PeriodoFaturamento {
   hoje: number;
   semana: number;
@@ -23,7 +30,7 @@ interface PeriodoFaturamento {
 
 interface NovaDashboardDados {
   total_pets_cadastrados: number;
-  servicos: PeriodoMetricas;
+  servicos: PeriodoServicos;
   atendimentos: PeriodoMetricas;
   faturamento: PeriodoFaturamento;
   ranking_pets: Array<{ nome_pet: string; total_visitas: number }>;
@@ -67,14 +74,14 @@ export default function DashboardScreen() {
         
         <View className="border-b border-slate-100 pb-2 flex-row justify-between">
           <Text className="font-semibold text-slate-400 text-xs w-[30%]">PERÍODO</Text>
-          <Text className="font-semibold text-slate-400 text-xs text-center flex-1">SERV. REALIZADOS</Text>
-          <Text className="font-semibold text-slate-400 text-xs text-right flex-1">ATENDIMENTOS</Text>
+          <Text className="font-semibold text-slate-400 text-xs text-center flex-1">DETALHE DOS SERVIÇOS</Text>
+          <Text className="font-semibold text-slate-400 text-xs text-right flex-1">AGENDAMENTOS</Text>
         </View>
 
-        <TableRow periodo="Hoje" servicos={dados?.servicos.hoje ?? 0} atendimentos={dados?.atendimentos.hoje ?? 0} />
-        <TableRow periodo="Esta Semana" servicos={dados?.servicos.semana ?? 0} atendimentos={dados?.atendimentos.semana ?? 0} />
-        <TableRow periodo="Este Mês" servicos={dados?.servicos.mes ?? 0} atendimentos={dados?.atendimentos.mes ?? 0} />
-        <TableRow periodo="Este Ano" servicos={dados?.servicos.ano ?? 0} atendimentos={dados?.atendimentos.ano ?? 0} />
+        <TableRow periodo="Hoje" detalhe={dados?.servicos.hoje ?? "Nenhum"} atendimentos={dados?.atendimentos.hoje ?? 0} />
+        <TableRow periodo="Esta Semana" detalhe={dados?.servicos.semana ?? "Nenhum"} atendimentos={dados?.atendimentos.semana ?? 0} />
+        <TableRow periodo="Este Mês" detalhe={dados?.servicos.mes ?? "Nenhum"} atendimentos={dados?.atendimentos.mes ?? 0} />
+        <TableRow periodo="Este Ano" detalhe={dados?.servicos.ano ?? "Nenhum"} atendimentos={dados?.atendimentos.ano ?? 0} />
       </Card>
 
       <Card className="gap-3">
@@ -106,12 +113,12 @@ export default function DashboardScreen() {
   );
 }
 
-function TableRow({ periodo, servicos, atendimentos }: { periodo: string; servicos: number; atendimentos: number }) {
+function TableRow({ periodo, detalhe, atendimentos }: { periodo: string; detalhe: string; atendimentos: number }) {
   return (
-    <View className="flex-row justify-between items-center py-1">
-      <Text className="text-sm font-medium text-slate-600 w-[30%]">{periodo}</Text>
-      <Text className="text-sm font-semibold text-slate-800 text-center flex-1">{servicos} itens</Text>
-      <Text className="text-sm font-semibold text-slate-800 text-right flex-1">{atendimentos} check-ins</Text>
+    <View className="flex-row justify-between items-center py-2 border-b border-slate-50">
+      <Text className="text-sm font-semibold text-slate-700 w-[30%]">{periodo}</Text>
+      <Text className="text-xs font-medium text-slate-500 text-center flex-1 px-2">{detalhe}</Text>
+      <Text className="text-sm font-bold text-teal-800 text-right flex-1">{atendimentos} check-ins</Text>
     </View>
   );
 }
