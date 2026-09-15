@@ -269,9 +269,16 @@ export default function AgendaScreen() {
                   </Text>
                 </View>
                 <View className="rounded-full bg-teal-50 px-3 py-1">
-                  <Text className="text-xs font-semibold text-teal-800">
-                    {formatDate(item.data_atendimento)} {formatTime(String(item.horario_atendimento))}
-                  </Text>
+                <Text className="text-xs font-semibold text-teal-800">
+                    {(() => {
+                      const d = String(item.data_atendimento).slice(0, 10);
+                      if (d.includes("-")) {
+                        const [ano, mes, dia] = d.split("-");
+                        return `${dia}/${mes}/${ano}`;
+                    }
+                    return d;
+                  })()} · {formatTime(String(item.horario_atendimento))}
+                </Text>
                 </View>
               </View>
               <View className="flex-row gap-2">
