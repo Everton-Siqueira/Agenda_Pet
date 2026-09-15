@@ -90,10 +90,10 @@ export default function TutoresScreen() {
     });
   }
 
-  // Lógica inteligente que filtra a lista original em tempo real conforme você digita
-  const tutoresFiltrados = tutores.filter((tutor) =>
-    tutor.nome.toLowerCase().includes(busca.toLowerCase())
-  );
+  // Filtra por nome e já organiza em ordem alfabética (A-Z)
+  const tutoresFiltrados = tutores
+    .filter((tutor) => tutor.nome.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
 
   return (
     <Screen
