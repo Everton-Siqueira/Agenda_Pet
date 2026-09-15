@@ -1,3 +1,4 @@
+import re
 from pydantic import BaseModel, Field, field_validator
 from datetime import date, time
 from decimal import Decimal
