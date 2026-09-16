@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, Text, View, TextInput } from "react-native";
+import { Pressable, Text, View, TextInput, ScrollView } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { atendimentoApi, petApi, servicoApi } from "../../src/api/petshop";
@@ -27,7 +27,7 @@ export default function AgendaScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [busca, setBusca] = useState(""); // Estado para controlar a pesquisa na agenda
+  const [busca, setBusca] = useState("");
 
   const petMap = useMemo(() => new Map(pets.map((pet) => [pet.id, pet])), [pets]);
   const servicoMap = useMemo(
@@ -35,12 +35,10 @@ export default function AgendaScreen() {
     [servicos]
   );
 
-  // Organiza a listagem de pets por ordem alfabética para o formulário
   const petsOrdenados = useMemo(() => {
     return [...pets].sort((a, b) => a.nome_pet.localeCompare(b.nome_pet));
   }, [pets]);
 
-  // Organiza a listagem de serviços por ordem alfabética para o formulário
   const servicosOrdenados = useMemo(() => {
     return [...servicos].sort((a, b) => a.tipo_servico.localeCompare(b.tipo_servico));
   }, [servicos]);
@@ -55,13 +53,7 @@ export default function AgendaScreen() {
         servicoApi.list(),
       ]);
       
-      const agendaOrdenada = [...agenda].sort((a, b) => {
-        const dataA = `${a.data_atendimento} ${a.horario_atendimento}`;
-        const dataB = `${b.data_atendimento} ${b.horario_atendimento}`;
-        return dataB.localeCompare(dataA);
-      });
-
-      setAtendimentos(agendaOrdenada);
+      setAtendimentos(agenda);
       setPets(petList);
       setServicos(servicoList);
     } catch (err) {
@@ -85,7 +77,6 @@ export default function AgendaScreen() {
 
   function openEdit(item: Atendimento) {
     setEditingId(item.id);
-
     setForm({
       id_pet: String(item.id_pet),
       data_atendimento: String(item.data_atendimento), 
@@ -140,14 +131,39 @@ export default function AgendaScreen() {
     });
   }
 
-  // Filtra os agendamentos permitindo buscar tanto pelo nome do pet quanto pelo tipo do serviço
+  // 1. Filtra os agendamentos pela busca (Nome do Pet ou Serviço)
   const atendimentosFiltrados = atendimentos.filter((item) => {
     const nomePet = petMap.get(item.id_pet)?.nome_pet?.toLowerCase() ?? "";
     const tipoServico = servicoMap.get(item.id_servico)?.tipo_servico?.toLowerCase() ?? "";
     const termoBusca = busca.toLowerCase();
-
     return nomePet.includes(termoBusca) || tipoServico.includes(termoBusca);
   });
+
+  // 2. Agrupa os atendimentos por data e ordena os horários de forma crescente (09:00 -> 14:00)
+  const gruposPorData = useMemo(() => {
+    const grupos: { [data: string]: Atendimento[] } = {};
+
+    atendimentosFiltrados.forEach((item) => {
+      const data = item.data_atendimento;
+      if (!grupos[data]) {
+        grupos[data] = [];
+      }
+      grupos[data].push(item);
+    });
+
+    // Ordena os horários dentro de cada dia de forma crescente
+    Object.keys(grupos).forEach((data) => {
+      grupos[data].sort((a, b) => a.horario_atendimento.localeCompare(b.horario_atendimento));
+    });
+
+    // Ordena os dias para que os dias mais recentes apareçam no topo
+    return Object.keys(grupos)
+      .sort((a, b) => b.localeCompare(a))
+      .map((data) => ({
+        data,
+        atendimentos: grupos[data],
+      }));
+  }, [atendimentosFiltrados]);
 
   return (
     <Screen
@@ -160,7 +176,6 @@ export default function AgendaScreen() {
         </View>
       }
     >
-    
       <ErrorBanner message={error} />
 
       {formOpen ? (
@@ -235,7 +250,6 @@ export default function AgendaScreen() {
           <Button title={editingId ? "Salvar alterações" : "Agendar"} onPress={handleSave} loading={saving} />
         </Card>
       ) : (
-        /* Barra de pesquisa inteligente para Agenda (Filtra por Pet ou Serviço) */
         <View className="mb-4">
           <Input
               placeholder="🔍 Buscar agendamento por pet ou serviço..."
@@ -249,38 +263,59 @@ export default function AgendaScreen() {
           title="Nenhum atendimento ainda"
           subtitle="Cadastre um pet e um serviço, depois crie o primeiro horário na agenda."
         />
-      ) : atendimentosFiltrados.length === 0 ? (
-        /* Estado vazio quando a busca não encontra correspondências na agenda */
+      ) : gruposPorData.length === 0 ? (
         <EmptyState title="Nenhum agendamento encontrado" subtitle="Verifique os termos digitados e tente novamente." />
       ) : (
-        /* Renderização da lista cronológica filtrada dinamicamente */
-        atendimentosFiltrados.map((item) => {
-          const pet = petMap.get(item.id_pet);
-          const servico = servicoMap.get(item.id_servico);
-          return (
-            <Card key={item.id} className="gap-3 mb-3">
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1">
-                  <Text className="text-lg font-semibold text-slate-900">
-                    {pet?.nome_pet ?? `Pet #${item.id_pet}`}
-                  </Text>
-                  <Text className="text-sm text-slate-500">
-                    {servico?.tipo_servico ?? `Serviço #${item.id_servico}`}
-                  </Text>
-                  <Text className="text-sm text-slate-500">
+        gruposPorData.map((grupo) => (
+          <View key={grupo.data} className="mb-6">
+            <View className="bg-slate-100 px-3 py-2 rounded-lg mb-2 border-l-4 border-teal-600">
+              <Text className="text-base font-bold text-slate-800">🗓️ Dia {grupo.data}</Text>
+            </View>
 
-                    {item.data_atendimento} às {item.horario_atendimento.slice(0, 5)}
-                  </Text>
-                </View>
-                <View className="flex-row gap-2">
-                  
-                </View>
-                  <Button title="Editar" variant="secondary" onPress={() => openEdit(item)}/>
-                  <Button title="Excluir" variant="danger" onPress={() => handleDelete(item.id)}/>
-              </View>
+            <Card className="p-2 gap-1">
+              {grupo.atendimentos.map((item) => {
+                const pet = petMap.get(item.id_pet);
+                const servico = servicoMap.get(item.id_servico);
+                return (
+                  <View 
+                    key={item.id} 
+                    className="flex-row items-center justify-between py-2.5 px-2 border-b border-slate-100 last:border-0"
+                  >
+                    <View className="flex-row items-center flex-1 gap-2">
+                      <Text className="text-sm font-bold text-teal-700 w-12">
+                        {item.horario_atendimento.slice(0, 5)}
+                      </Text>
+                      <Text className="text-sm font-semibold text-slate-900">
+                        {pet?.nome_pet ?? `Pet #${item.id_pet}`}
+                      </Text>
+                      <Text className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                        {servico?.tipo_servico ?? `Serviço #${item.id_servico}`}
+                      </Text>
+                      <Text className="text-xs font-semibold text-slate-600 ml-auto mr-2">
+                        {formatMoney(item.valor)}
+                      </Text>
+                    </View>
+
+                    <View className="flex-row gap-1">
+                      <Pressable 
+                        className="bg-slate-200 px-2.5 py-1 rounded" 
+                        onPress={() => openEdit(item)}
+                      >
+                        <Text className="text-xs font-medium text-slate-700">Editar</Text>
+                      </Pressable>
+                      <Pressable 
+                        className="bg-red-50 px-2.5 py-1 rounded border border-red-200" 
+                        onPress={() => handleDelete(item.id)}
+                      >
+                        <Text className="text-xs font-medium text-red-600">Excluir</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })}
             </Card>
-           );
-        })
+          </View>
+        ))
       )}
     </Screen>
   );
