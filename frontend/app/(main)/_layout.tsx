@@ -1,5 +1,7 @@
+import "../../global.css";
 import { Tabs } from "expo-router";
 import { Text } from "react-native";
+
 
 export const unstable_settings = {
   initialRouteName: "agenda",
