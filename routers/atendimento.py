@@ -61,8 +61,8 @@ def create_atendimento(atendimento: Atendimento):
                     detail="Atendimento já cadastrado."
                 )
                  
-            sql = """INSERT INTO atendimento (id_pet, data_atendimento, horario_atendimento, id_servico, valor) 
-                    VALUES (:id_pet, :data_atendimento, :horario_atendimento, :id_servico, :valor)
+            sql = """INSERT INTO atendimento (id_pet, data_atendimento, horario_atendimento, id_servico, valor, status) 
+                    VALUES (:id_pet, :data_atendimento, :horario_atendimento, :id_servico, :valor, :status)
                     RETURNING id"""
 
             dados = {
@@ -70,7 +70,8 @@ def create_atendimento(atendimento: Atendimento):
                 "data_atendimento": atendimento.data_atendimento,
                 "horario_atendimento": atendimento.horario_atendimento,
                 "id_servico": atendimento.id_servico,
-                "valor": atendimento.valor
+                "valor": atendimento.valor,
+                "status": atendimento.status
             }
 
             result = conn.execute(text(sql), dados)
@@ -82,7 +83,9 @@ def create_atendimento(atendimento: Atendimento):
             "data_atendimento": atendimento.data_atendimento,
             "horario_atendimento": atendimento.horario_atendimento,
             "id_servico": atendimento.id_servico,
-            "valor": atendimento.valor
+            "valor": atendimento.valor,
+            "status": atendimento.status
+
         }
 
     except HTTPException:
@@ -98,7 +101,7 @@ def create_atendimento(atendimento: Atendimento):
 def get_atendimentos():  
     try:
         with engine.connect() as conn:
-            sql = """SELECT id, id_pet, data_atendimento, horario_atendimento, id_servico, valor FROM atendimento"""
+            sql = """SELECT id, id_pet, data_atendimento, horario_atendimento, id_servico, valor, status FROM atendimento"""
             result = conn.execute(text(sql))
             
             atendimentos = []
@@ -150,7 +153,8 @@ def get_atendimento(atendimento_id: int):
                     t.nome AS nome_tutor,
                     p.nome_pet,
                     s.tipo_servico AS servico,
-                    a.valor
+                    a.valor,
+                    a.status
                 FROM atendimento a
                     LEFT JOIN pet p ON p.id = a.id_pet
                     LEFT JOIN tutor t ON t.id = p.id_tutor
@@ -187,7 +191,7 @@ def update_atendimento(atendimento_id: int, dados_projeto: dict):
                 raise HTTPException(status_code=404, detail="Atendimento não encontrado.")
 
             sql = """UPDATE atendimento 
-                    SET id_pet = :id_pet, data_atendimento = :data_atendimento, horario_atendimento = :horario_atendimento, id_servico = :id_servico, valor = :valor 
+                    SET id_pet = :id_pet, data_atendimento = :data_atendimento, horario_atendimento = :horario_atendimento, id_servico = :id_servico, valor = :valor, status = :status 
                     WHERE id = :atendimento_id"""
 
             dados = {
@@ -195,7 +199,8 @@ def update_atendimento(atendimento_id: int, dados_projeto: dict):
                 "data_atendimento": atendimento.data_atendimento.isoformat(),      
                 "horario_atendimento": atendimento.horario_atendimento.isoformat(), 
                 "id_servico": int(atendimento.id_servico),
-                "valor": float(atendimento.valor),                                  
+                "valor": float(atendimento.valor),
+                "status": str(atendimento.status),
                 "atendimento_id": int(atendimento_id)
             }
             conn.execute(text(sql), dados)
