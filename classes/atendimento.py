@@ -9,6 +9,7 @@ class Atendimento(BaseModel):
     horario_atendimento: time = Field(...)
     id_servico: int = Field(..., gt=0)
     valor: Decimal = Field(..., gt=0, le=999.99, decimal_places=2)
+    status: str = Field(default="pendente")
 
     @field_validator("data_atendimento", mode="before")
     def formatar_data_flexivel(cls, value):

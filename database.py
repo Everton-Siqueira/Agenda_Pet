@@ -18,14 +18,14 @@ engine = create_engine(DATABASE_URL)
 def testar_conexao():
     """Apenas testa se o banco de dados do pgAdmin está acessível e atualiza a estrutura."""
     try:
-        with engine.connect() as con:
+        with engine.begin() as con:
             # 1. Mantém o seu teste original de conexão
             con.execute(text("SELECT 1"))
             print("Conexão com o PostgreSQL realizada com sucesso!")
             
             # 2. Executa a criação da coluna de forma direta (sem o con.begin())
             con.execute(text("""
-                ALTER TABLE atendimentos 
+                ALTER TABLE atendimento
                 ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pendente' NOT NULL;
             """))
             print("Estrutura da tabela atualizada: Coluna 'status' pronta!")
