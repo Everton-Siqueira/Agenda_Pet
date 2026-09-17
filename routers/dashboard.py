@@ -8,14 +8,12 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 def formatar_servicos(resultados, coluna_qtd):
     """Filtra itens maiores que zero e formata a string"""
     itens = [f"{row[coluna_qtd]}x {row['tipo_servico']}" for row in resultados if row[coluna_qtd] > 0]
-    # Se quiser ordenar do maior pro menor, pode adicionar um sort aqui
     return ", ".join(itens) if itens else "Nenhum serviço"
 
 @router.get("/resumo-gerencial")
 def get_resumo_gerencial():
     try:
         hoje = date.today()
-        # Alterado para padrão de dashboards: períodos retroativos (últimos 7 dias) ou atuais (este mês)
         uma_semana_atras = hoje - timedelta(days=7)
         primeiro_dia_mes = date(hoje.year, hoje.month, 1)
         primeiro_dia_ano = date(hoje.year, 1, 1)
@@ -28,52 +26,54 @@ def get_resumo_gerencial():
         }
 
         with engine.connect() as conn:
-            # 1. TOTAL DE PETS (1 Query)
+            # 1. TOTAL DE PETS (Mantém igual, pois olha para a tabela pet)
             total_pets = conn.execute(text("SELECT COUNT(id) FROM pet")).scalar() or 0
 
-            # 2. ATENDIMENTOS E FATURAMENTO CONSOLIDADOS (1 Query usando FILTER do PostgreSQL)
+            # 2. ATENDIMENTOS E FATURAMENTO (Agora considerando o STATUS)
+            # Regra: Faturamento soma apenas 'confirmado'. Atendimentos conta tudo que não for 'cancelado'
             sql_metricas = """
                 SELECT 
-                    COUNT(id) FILTER (WHERE data_atendimento = :hoje) as atend_hoje,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :semana) as atend_semana,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes) as atend_mes,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano) as atend_ano,
+                    COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
+                    COUNT(id) FILTER (WHERE data_atendimento >= :semana AND status != 'cancelado') as atend_semana,
+                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes AND status != 'cancelado') as atend_mes,
+                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano AND status != 'cancelado') as atend_ano,
                     
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje), 0) as fat_hoje,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana), 0) as fat_semana,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes), 0) as fat_mes,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano), 0) as fat_ano
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'confirmado'), 0) as fat_hoje,
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'confirmado'), 0) as fat_semana,
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'confirmado'), 0) as fat_mes,
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'confirmado'), 0) as fat_ano
                 FROM atendimento
                 WHERE data_atendimento >= :inicio_ano
             """
             metricas = conn.execute(text(sql_metricas), parametros_data).mappings().fetchone()
 
-            # 3. DETALHAMENTO DE SERVIÇOS CONSOLIDADO (1 Query)
+            # 3. DETALHAMENTO DE SERVIÇOS (Apenas os confirmados)
             sql_servicos = """
                 SELECT 
                     s.tipo_servico,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje) as qtd_hoje,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana) as qtd_semana,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes) as qtd_mes,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano) as qtd_ano
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje AND a.status = 'confirmado') as qtd_hoje,
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana AND a.status = 'confirmado') as qtd_semana,
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes AND a.status = 'confirmado') as qtd_mes,
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano AND a.status = 'confirmado') as qtd_ano
                 FROM atendimento a
                 JOIN servico s ON a.id_servico = s.id
-                WHERE a.data_atendimento >= :inicio_ano
+                WHERE a.data_atendimento >= :inicio_ano 
+                  AND a.status = 'confirmado'
                 GROUP BY s.tipo_servico
             """
             result_servicos = conn.execute(text(sql_servicos), parametros_data).mappings().fetchall()
             
-            # Formatando no Python (evita 4 idas ao banco de dados)
             detalhe_hoje = formatar_servicos(result_servicos, "qtd_hoje")
             detalhe_semana = formatar_servicos(result_servicos, "qtd_semana")
             detalhe_mes = formatar_servicos(result_servicos, "qtd_mes")
             detalhe_ano = formatar_servicos(result_servicos, "qtd_ano")
 
-            # 4. RANKING DE ASSIDUIDADE (1 Query)
+            # 4. RANKING DE ASSIDUIDADE (Ignorar cancelados e pendentes)
             sql_ranking = """
                 SELECT p.nome_pet, COUNT(a.id) as total_visitas
                 FROM atendimento a
                 JOIN pet p ON a.id_pet = p.id
+                WHERE a.status = 'confirmado'
                 GROUP BY a.id_pet, p.nome_pet
                 ORDER BY total_visitas DESC
                 LIMIT 5
