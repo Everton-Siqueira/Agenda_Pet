@@ -15,6 +15,7 @@ const emptyForm = {
   horario_atendimento: "09:00",
   id_servico: "",
   valor: "",
+  status: "pendente",
 };
 
 export default function AgendaScreen() {
@@ -83,6 +84,7 @@ export default function AgendaScreen() {
       horario_atendimento: String(item.horario_atendimento).slice(0, 5),
       id_servico: String(item.id_servico),
       valor: String(item.valor),
+      status: item.status ?? "pendente",
     });
     setFormOpen(true);
   }
@@ -91,6 +93,25 @@ export default function AgendaScreen() {
     setError(null);
     setSaving(true);
 
+  async function handleConfirmarAtendimento(item: Atendimento) {
+  setError(null);
+  try {
+    const payload: Atendimento = {
+      id: item.id,
+      id_pet: Number(item.id_pet),
+      data_atendimento: item.data_atendimento,
+      horario_atendimento: item.horario_atendimento.slice(0, 5),
+      id_servico: Number(item.id_servico),
+      valor: Number(String(item.valor).replace(",", ".")),
+      status: "concluido", // O TypeScript agora aceita pois sabe que segue o tipo Atendimento
+    };
+
+    await atendimentoApi.update(item.id, payload);
+    await load(); // Recarrega a listagem atualizada
+  } catch (err) {
+    setError(getErrorMessage(err));
+  }
+}
     const payload = {
       id_pet: Number(form.id_pet),
       data_atendimento: form.data_atendimento.trim(), 
