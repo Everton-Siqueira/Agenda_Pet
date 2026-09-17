@@ -50,7 +50,12 @@ export const atendimentoApi = {
   update: (id: number, payload: Omit<Atendimento, "id">) =>
     api.put<Atendimento>(`/atendimento/${id}`, payload).then((res) => res.data),
   remove: (id: number) => api.delete(`/atendimento/${id}`).then((res) => res.data),
+  updateStatus: async (id: number, status: string) => {
+    const response = await api.patch(`/atendimento/${id}/status`, { status });
+    return response.data;
+  },
 };
+  
 
 export const dashboardApi = {
   // Substitui as quatro chamadas antigas por uma única rota gerencial unificada

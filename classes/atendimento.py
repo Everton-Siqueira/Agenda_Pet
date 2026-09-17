@@ -3,6 +3,17 @@ from pydantic import BaseModel, Field, field_validator
 from datetime import date, time
 from decimal import Decimal
 
+class AtendimentoStatusUpdate(BaseModel):
+    status: str
+
+    @field_validator("status")
+    def validar_status(cls, value):
+        status_validos = ["pendente", "confirmado", "cancelado"]
+        valor_limpo = value.strip().lower()
+        if valor_limpo not in status_validos:
+            raise ValueError(f"Status inválido. Escolha entre: {', '.join(status_validos)}")
+        return valor_limpo
+
 class Atendimento(BaseModel):
     id_pet: int = Field(..., gt=0, le=999)
     data_atendimento: date = Field(...)

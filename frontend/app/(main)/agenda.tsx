@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, Text, View, TextInput, ScrollView } from "react-native";
+import { Pressable, Text, View, TextInput } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { atendimentoApi, petApi, servicoApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
 import { Button, Card, Chip, EmptyState, ErrorBanner, Input } from "../../src/components/ui";
 import { confirmAction } from "../../src/utils/confirm";
-import { formatDate, formatMoney, formatTime, TIME_SLOTS } from "../../src/utils/format";
+import { formatMoney, TIME_SLOTS } from "../../src/utils/format";
 import type { Atendimento, Pet, Servico } from "../../src/types";
 
 const emptyForm = {
@@ -89,35 +89,27 @@ export default function AgendaScreen() {
     setFormOpen(true);
   }
 
+  async function handleMudarStatus(id: number, novoStatus: string) {
+    setError(null);
+    try {
+      await atendimentoApi.updateStatus(id, novoStatus);
+      await load();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  }
+
   async function handleSave() {
     setError(null);
     setSaving(true);
 
-  async function handleConfirmarAtendimento(item: Atendimento) {
-  setError(null);
-  try {
-    const payload: Atendimento = {
-      id: item.id,
-      id_pet: Number(item.id_pet),
-      data_atendimento: item.data_atendimento,
-      horario_atendimento: item.horario_atendimento.slice(0, 5),
-      id_servico: Number(item.id_servico),
-      valor: Number(String(item.valor).replace(",", ".")),
-      status: "concluido", // O TypeScript agora aceita pois sabe que segue o tipo Atendimento
-    };
-
-    await atendimentoApi.update(item.id, payload);
-    await load(); // Recarrega a listagem atualizada
-  } catch (err) {
-    setError(getErrorMessage(err));
-  }
-}
     const payload = {
       id_pet: Number(form.id_pet),
       data_atendimento: form.data_atendimento.trim(), 
       horario_atendimento: form.horario_atendimento.slice(0, 5), 
       id_servico: Number(form.id_servico),
       valor: Number(String(form.valor).replace(",", ".")),
+      status: form.status,
     };
 
     if (!payload.id_pet || !payload.id_servico || !payload.data_atendimento || !payload.valor) {
@@ -160,7 +152,7 @@ export default function AgendaScreen() {
     return nomePet.includes(termoBusca) || tipoServico.includes(termoBusca);
   });
 
-  // 2. Agrupa os atendimentos por data e ordena os horários de forma crescente (09:00 -> 14:00)
+  // 2. Agrupa os atendimentos por data e ordena os horários
   const gruposPorData = useMemo(() => {
     const grupos: { [data: string]: Atendimento[] } = {};
 
@@ -172,12 +164,10 @@ export default function AgendaScreen() {
       grupos[data].push(item);
     });
 
-    // Ordena os horários dentro de cada dia de forma crescente
     Object.keys(grupos).forEach((data) => {
       grupos[data].sort((a, b) => a.horario_atendimento.localeCompare(b.horario_atendimento));
     });
 
-    // Ordena os dias para que os dias mais recentes apareçam no topo
     return Object.keys(grupos)
       .sort((a, b) => b.localeCompare(a))
       .map((data) => ({
@@ -273,9 +263,11 @@ export default function AgendaScreen() {
       ) : (
         <View className="mb-4">
           <Input
-              placeholder="🔍 Buscar agendamento por pet ou serviço..."
-              value={busca}
-              onChangeText={setBusca} label={""}          />
+            placeholder="🔍 Buscar agendamento por pet ou serviço..."
+            value={busca}
+            onChangeText={setBusca}
+            label={""}
+          />
         </View>
       )}
 
@@ -293,42 +285,100 @@ export default function AgendaScreen() {
               <Text className="text-base font-bold text-slate-800">🗓️ Dia {grupo.data}</Text>
             </View>
 
-            <Card className="p-2 gap-1">
+            <Card className="p-2 gap-2">
               {grupo.atendimentos.map((item) => {
                 const pet = petMap.get(item.id_pet);
                 const servico = servicoMap.get(item.id_servico);
                 return (
                   <View 
                     key={item.id} 
-                    className="flex-row items-center justify-between py-2.5 px-2 border-b border-slate-100 last:border-0"
+                    className="py-2.5 px-2 border-b border-slate-100 last:border-0 gap-2"
                   >
-                    <View className="flex-row items-center flex-1 gap-2">
-                      <Text className="text-sm font-bold text-teal-700 w-12">
-                        {item.horario_atendimento.slice(0, 5)}
-                      </Text>
-                      <Text className="text-sm font-semibold text-slate-900">
-                        {pet?.nome_pet ?? `Pet #${item.id_pet}`}
-                      </Text>
-                      <Text className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                        {servico?.tipo_servico ?? `Serviço #${item.id_servico}`}
-                      </Text>
-                      <Text className="text-xs font-semibold text-slate-600 ml-auto mr-2">
-                        {formatMoney(item.valor)}
-                      </Text>
+                    {/* Linha principal com informações do atendimento */}
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center flex-1 gap-2 flex-wrap">
+                        <Text className="text-sm font-bold text-teal-700 w-12">
+                          {item.horario_atendimento.slice(0, 5)}
+                        </Text>
+                        <Text className="text-sm font-semibold text-slate-900">
+                          {pet?.nome_pet ?? `Pet #${item.id_pet}`}
+                        </Text>
+                        <Text className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                          {servico?.tipo_servico ?? `Serviço #${item.id_servico}`}
+                        </Text>
+                        <Text className="text-xs font-semibold text-slate-600 ml-auto mr-2">
+                          {formatMoney(item.valor)}
+                        </Text>
+                      </View>
+
+                      {/* Ações de Editar / Excluir */}
+                      <View className="flex-row gap-1">
+                        <Pressable 
+                          className="bg-slate-200 px-2.5 py-1 rounded" 
+                          onPress={() => openEdit(item)}
+                        >
+                          <Text className="text-xs font-medium text-slate-700">Editar</Text>
+                        </Pressable>
+                        <Pressable 
+                          className="bg-red-50 px-2.5 py-1 rounded border border-red-200" 
+                          onPress={() => handleDelete(item.id)}
+                        >
+                          <Text className="text-xs font-medium text-red-600">Excluir</Text>
+                        </Pressable>
+                      </View>
                     </View>
 
-                    <View className="flex-row gap-1">
-                      <Pressable 
-                        className="bg-slate-200 px-2.5 py-1 rounded" 
-                        onPress={() => openEdit(item)}
+                    {/* Linha com os botões rápidos de alteração de status */}
+                    <View className="flex-row items-center gap-1.5 pt-1">
+                      <Pressable
+                        className={`px-2.5 py-1 rounded-md border ${
+                          item.status === 'confirmado'
+                            ? 'bg-emerald-600 border-emerald-600'
+                            : 'bg-emerald-50 border-emerald-300'
+                        }`}
+                        onPress={() => handleMudarStatus(item.id, 'confirmado')}
                       >
-                        <Text className="text-xs font-medium text-slate-700">Editar</Text>
+                        <Text
+                          className={`text-xs font-semibold ${
+                            item.status === 'confirmado' ? 'text-white' : 'text-emerald-700'
+                          }`}
+                        >
+                          {item.status === 'confirmado' ? '✓ Confirmado' : 'Confirmar'}
+                        </Text>
                       </Pressable>
-                      <Pressable 
-                        className="bg-red-50 px-2.5 py-1 rounded border border-red-200" 
-                        onPress={() => handleDelete(item.id)}
+
+                      <Pressable
+                        className={`px-2.5 py-1 rounded-md border ${
+                          item.status === 'pendente'
+                            ? 'bg-amber-500 border-amber-500'
+                            : 'bg-amber-50 border-amber-300'
+                        }`}
+                        onPress={() => handleMudarStatus(item.id, 'pendente')}
                       >
-                        <Text className="text-xs font-medium text-red-600">Excluir</Text>
+                        <Text
+                          className={`text-xs font-semibold ${
+                            item.status === 'pendente' ? 'text-white' : 'text-amber-700'
+                          }`}
+                        >
+                          Pendente
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        className={`px-2.5 py-1 rounded-md border ${
+                          item.status === 'cancelado'
+                            ? 'bg-rose-600 border-rose-600'
+                            : 'bg-rose-50 border-rose-300'
+                        }`}
+                        onPress={() => handleMudarStatus(item.id, 'cancelado')}
+                      >
+                        <Text
+                          className={`text-xs font-semibold ${
+                            item.status === 'cancelado' ? 'text-white' : 'text-rose-700'
+                          }`}
+                        >
+                          Cancelar
+                        </Text>
                       </Pressable>
                     </View>
                   </View>

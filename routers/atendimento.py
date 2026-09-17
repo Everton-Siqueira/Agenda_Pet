@@ -1,6 +1,7 @@
 import re
-from fastapi import APIRouter, HTTPException
-from classes.atendimento import Atendimento
+from datetime import date
+from fastapi import APIRouter, HTTPException, status
+from classes.atendimento import Atendimento, AtendimentoStatusUpdate
 from sqlalchemy import text
 from database import engine
 
@@ -85,7 +86,6 @@ def create_atendimento(atendimento: Atendimento):
             "id_servico": atendimento.id_servico,
             "valor": atendimento.valor,
             "status": atendimento.status
-
         }
 
     except HTTPException:
@@ -108,7 +108,6 @@ def get_atendimentos():
             for row in result:
                 item = dict(row._mapping)
                 if item.get("data_atendimento"):
-                    from datetime import date
                     if isinstance(item["data_atendimento"], date):
                         item["data_atendimento"] = item["data_atendimento"].strftime("%d/%m/%Y")
                     elif isinstance(item["data_atendimento"], str) and "-" in item["data_atendimento"]:
@@ -211,3 +210,39 @@ def update_atendimento(atendimento_id: int, dados_projeto: dict):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+
+
+# --- NOVA ROTA PARA ALTERAÇÃO EXCLUSIVA DE STATUS ---
+@router.patch("/{atendimento_id}/status")
+def update_status_atendimento(atendimento_id: int, payload: AtendimentoStatusUpdate):
+    try:
+        with engine.begin() as conn:
+            # 1. Verifica se o atendimento existe
+            sql_check = text("SELECT id FROM atendimento WHERE id = :atendimento_id")
+            if conn.execute(sql_check, {"atendimento_id": atendimento_id}).scalar() is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Atendimento não encontrado."
+                )
+
+            # 2. Atualiza apenas o status
+            sql_update = text("""
+                UPDATE atendimento 
+                SET status = :status 
+                WHERE id = :atendimento_id
+            """)
+            
+            conn.execute(sql_update, {
+                "status": payload.status,
+                "atendimento_id": atendimento_id
+            })
+
+        return {"message": f"Status alterado para '{payload.status}' com sucesso!"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar status: {str(e)}"
+        )
