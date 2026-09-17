@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // Configura o modo escuro por classe para evitar o erro de execução na Web
+  darkMode: "class", 
+
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./src/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
@@ -19,3 +22,4 @@ module.exports = {
   },
   plugins: [],
 };
+

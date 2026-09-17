@@ -19,6 +19,7 @@ export default function ServicosScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [busca, setBusca] = useState(""); // Estado para controlar o termo de busca dos serviços
 
   const load = useCallback(async () => {
     setError(null);
@@ -89,6 +90,11 @@ export default function ServicosScreen() {
     });
   }
 
+  // Filtra os serviços pelo termo digitado e os organiza em ordem alfabética (A-Z)
+  const servicosFiltrados = servicos
+    .filter((servico) => servico.tipo_servico.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => a.tipo_servico.localeCompare(b.tipo_servico));
+
   return (
     <Screen
       title="Serviços"
@@ -122,13 +128,25 @@ export default function ServicosScreen() {
           />
           <Button title={editingId ? "Salvar" : "Cadastrar serviço"} onPress={handleSave} loading={saving} />
         </Card>
-      ) : null}
+      ) : (
+        /* Barra de pesquisa inteligente para Serviços */
+        <View className="mb-4">
+          <Input
+              placeholder="🔍 Procurar por tipo de serviço..."
+              value={busca}
+              onChangeText={setBusca} label={""}          />
+        </View>
+      )}
 
       {servicos.length === 0 ? (
         <EmptyState title="Nenhum serviço" subtitle="Cadastre banho, tosa ou outro serviço do petshop." />
+      ) : servicosFiltrados.length === 0 ? (
+        /* Estado vazio quando a busca não encontra resultados */
+        <EmptyState title="Nenhum serviço encontrado" subtitle="Verifique o nome digitado e tente novamente." />
       ) : (
-        servicos.map((servico) => (
-          <Card key={servico.id} className="gap-3">
+        /* Mapeamento da lista filtrada e ordenada alfabeticamente */
+        servicosFiltrados.map((servico) => (
+          <Card key={servico.id} className="gap-3 mb-3">
             <View className="flex-row items-center justify-between">
               <Text className="text-lg font-semibold text-slate-900">{servico.tipo_servico}</Text>
               <Text className="text-base font-semibold text-teal-800">{formatMoney(servico.valor)}</Text>

@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { Text, View } from "react-native";
+import React, { useCallback, useState } from "react";
+import { TextInput, View, Text } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { tutorApi } from "../../src/api/petshop";
@@ -18,6 +18,7 @@ export default function TutoresScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [busca, setBusca] = useState(""); // Estado para guardar o texto digitado na pesquisa
 
   const load = useCallback(async () => {
     setError(null);
@@ -89,6 +90,11 @@ export default function TutoresScreen() {
     });
   }
 
+  // Filtra por nome e já organiza em ordem alfabética (A-Z)
+  const tutoresFiltrados = tutores
+    .filter((tutor) => tutor.nome.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+
   return (
     <Screen
       title="Tutores"
@@ -121,13 +127,25 @@ export default function TutoresScreen() {
           />
           <Button title={editingId ? "Salvar" : "Cadastrar"} onPress={handleSave} loading={saving} />
         </Card>
-      ) : null}
+      ) : (
+        /* Barra de pesquisa inteligente por nome/iniciais (só aparece se o formulário estiver fechado) */
+        <View className="mb-4">
+          <Input
+              placeholder="🔍 Procurar contato do tutor..."
+              value={busca}
+              onChangeText={setBusca} label={""}          />
+        </View>
+      )}
 
       {tutores.length === 0 ? (
         <EmptyState title="Nenhum tutor" subtitle="Use esta tela ou a tela de cadastro inicial." />
+      ) : tutoresFiltrados.length === 0 ? (
+        /* Estado caso a pesquisa não encontre correspondências */
+        <EmptyState title="Nenhum correspondência" subtitle="Nenhum tutor encontrado com as iniciais digitadas." />
       ) : (
-        tutores.map((tutor) => (
-          <Card key={tutor.id} className="gap-3">
+        /* Renderiza a lista filtrada dinamicamente */
+        tutoresFiltrados.map((tutor) => (
+          <Card key={tutor.id} className="gap-3 mb-3">
             <Text className="text-lg font-semibold text-slate-900">{tutor.nome}</Text>
             <Text className="text-sm text-slate-500">{tutor.celular}</Text>
             <Text className="text-sm text-slate-500">{tutor.endereco}</Text>

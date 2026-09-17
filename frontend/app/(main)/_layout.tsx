@@ -1,6 +1,7 @@
-import { Redirect, Tabs } from "expo-router";
+import "../../global.css";
+import { Tabs } from "expo-router";
 import { Text } from "react-native";
-import { useAuth } from "../../src/context/AuthContext";
+
 
 export const unstable_settings = {
   initialRouteName: "agenda",
@@ -15,11 +16,7 @@ function TabLabel({ title, focused }: { title: string; focused: boolean }) {
 }
 
 export default function MainLayout() {
-  const { session, loading } = useAuth();
-
-  if (!loading && !session) {
-    return <Redirect href="/" />;
-  }
+  // Trava de sessão removida para o administrador acessar direto o painel interno
 
   return (
     <Tabs

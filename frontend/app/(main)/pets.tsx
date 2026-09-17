@@ -19,8 +19,14 @@ export default function PetsScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [busca, setBusca] = useState(""); // Estado para guardar a busca por nome de pet
 
   const tutorMap = useMemo(() => new Map(tutores.map((tutor) => [tutor.id, tutor])), [tutores]);
+
+  // Organiza os tutores por ordem alfabética para facilitar a seleção no formulário
+  const tutoresOrdenados = useMemo(() => {
+    return [...tutores].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [tutores]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -98,6 +104,11 @@ export default function PetsScreen() {
     });
   }
 
+  // Lógica que filtra e ordena os pets por ordem alfabética (A-Z) simultaneamente
+  const petsFiltrados = pets
+    .filter((pet) => pet.nome_pet.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => a.nome_pet.localeCompare(b.nome_pet));
+
   return (
     <Screen
       title="Pets"
@@ -128,7 +139,7 @@ export default function PetsScreen() {
           />
           <Text className="text-sm font-medium text-slate-600">Tutor</Text>
           <View className="flex-row flex-wrap gap-2">
-            {tutores.map((tutor) => (
+            {tutoresOrdenados.map((tutor) => (
               <Chip
                 key={tutor.id}
                 label={tutor.nome}
@@ -139,13 +150,25 @@ export default function PetsScreen() {
           </View>
           <Button title={editingId ? "Salvar" : "Cadastrar pet"} onPress={handleSave} loading={saving} />
         </Card>
-      ) : null}
+      ) : (
+        /* Barra de busca inteligente para localizar os pets rapidamente */
+        <View className="mb-4">
+          <Input
+              placeholder="🔍 Procurar pelo nome do pet..."
+              value={busca}
+              onChangeText={setBusca} label={""}          />
+        </View>
+      )}
 
       {pets.length === 0 ? (
         <EmptyState title="Nenhum pet cadastrado" subtitle="Cadastre um tutor primeiro e depois adicione o pet." />
+      ) : petsFiltrados.length === 0 ? (
+        /* Caso digite as iniciais e nenhum pet corresponda */
+        <EmptyState title="Nenhum pet encontrado" subtitle="Verifique o nome digitado e tente novamente." />
       ) : (
-        pets.map((pet) => (
-          <Card key={pet.id} className="gap-3">
+        /* Renderização dinâmica dos pets ordenados e filtrados */
+        petsFiltrados.map((pet) => (
+          <Card key={pet.id} className="gap-3 mb-3">
             <Text className="text-lg font-semibold text-slate-900">{pet.nome_pet}</Text>
             <Text className="text-sm text-slate-500">
               {pet.especie} · Tutor: {tutorMap.get(pet.id_tutor)?.nome ?? `#${pet.id_tutor}`}
