@@ -25,6 +25,7 @@ export type Atendimento = {
   horario_atendimento: string;
   id_servico: number;
   valor: number | string;
+  status?: "pendente" | "concluido" | "cancelado";
 };
 
 export type AtendimentoDetalhe = {
@@ -35,6 +36,7 @@ export type AtendimentoDetalhe = {
   nome_pet: string | null;
   servico: string | null;
   valor: number | string;
+  status?: "pendente" | "concluido" | "cancelado";
 };
 
 export type DashboardResumo = {
