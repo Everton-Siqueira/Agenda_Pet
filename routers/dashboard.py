@@ -29,8 +29,8 @@ def get_resumo_gerencial():
             # 1. TOTAL DE PETS (Mantém igual, pois olha para a tabela pet)
             total_pets = conn.execute(text("SELECT COUNT(id) FROM pet")).scalar() or 0
 
-            # 2. ATENDIMENTOS E FATURAMENTO (Agora considerando o STATUS)
-            # Regra: Faturamento soma apenas 'confirmado'. Atendimentos conta tudo que não for 'cancelado'
+            # 2. ATENDIMENTOS E FATURAMENTO (Alinhado com a nova string 'concluido')
+            # Regra: Faturamento soma apenas 'concluido'. Atendimentos conta tudo que não for 'cancelado'
             sql_metricas = """
                 SELECT 
                     COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
@@ -38,27 +38,27 @@ def get_resumo_gerencial():
                     COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes AND status != 'cancelado') as atend_mes,
                     COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano AND status != 'cancelado') as atend_ano,
                     
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'confirmado'), 0) as fat_hoje,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'confirmado'), 0) as fat_semana,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'confirmado'), 0) as fat_mes,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'confirmado'), 0) as fat_ano
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'concluido'), 0) as fat_hoje,
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'concluido'), 0) as fat_semana,
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'concluido'), 0) as fat_mes,
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'concluido'), 0) as fat_ano
                 FROM atendimento
                 WHERE data_atendimento >= :inicio_ano
             """
             metricas = conn.execute(text(sql_metricas), parametros_data).mappings().fetchone()
 
-            # 3. DETALHAMENTO DE SERVIÇOS (Apenas os confirmados)
+            # 3. DETALHAMENTO DE SERVIÇOS (Apenas os concluidos)
             sql_servicos = """
                 SELECT 
                     s.tipo_servico,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje AND a.status = 'confirmado') as qtd_hoje,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana AND a.status = 'confirmado') as qtd_semana,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes AND a.status = 'confirmado') as qtd_mes,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano AND a.status = 'confirmado') as qtd_ano
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje AND a.status = 'concluido') as qtd_hoje,
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana AND a.status = 'concluido') as qtd_semana,
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes AND a.status = 'concluido') as qtd_mes,
+                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano AND a.status = 'concluido') as qtd_ano
                 FROM atendimento a
                 JOIN servico s ON a.id_servico = s.id
                 WHERE a.data_atendimento >= :inicio_ano 
-                  AND a.status = 'confirmado'
+                  AND a.status = 'concluido'
                 GROUP BY s.tipo_servico
             """
             result_servicos = conn.execute(text(sql_servicos), parametros_data).mappings().fetchall()
@@ -68,12 +68,12 @@ def get_resumo_gerencial():
             detalhe_mes = formatar_servicos(result_servicos, "qtd_mes")
             detalhe_ano = formatar_servicos(result_servicos, "qtd_ano")
 
-            # 4. RANKING DE ASSIDUIDADE (Ignorar cancelados e pendentes)
+            # 4. RANKING DE ASSIDUIDADE (Ignorar cancelados e pendentes - olha apenas concluidos)
             sql_ranking = """
                 SELECT p.nome_pet, COUNT(a.id) as total_visitas
                 FROM atendimento a
                 JOIN pet p ON a.id_pet = p.id
-                WHERE a.status = 'confirmado'
+                WHERE a.status = 'concluido'
                 GROUP BY a.id_pet, p.nome_pet
                 ORDER BY total_visitas DESC
                 LIMIT 5
