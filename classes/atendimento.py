@@ -8,7 +8,7 @@ class AtendimentoStatusUpdate(BaseModel):
 
     @field_validator("status")
     def validar_status(cls, value):
-        status_validos = ["pendente", "confirmado", "cancelado"]
+        status_validos = ["pendente", "cancelado","concluído"]
         valor_limpo = value.strip().lower()
         if valor_limpo not in status_validos:
             raise ValueError(f"Status inválido. Escolha entre: {', '.join(status_validos)}")
