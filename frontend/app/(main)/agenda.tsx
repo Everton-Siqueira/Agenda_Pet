@@ -137,7 +137,7 @@ export default function AgendaScreen() {
   async function handleConcluir(id: number) {
     try {
       setError(null);
-      await atendimentoApi.updateStatus(id, "concludido");
+      await atendimentoApi.updateStatus(id, "concluido");
       await load(); 
     } catch (err) {
       setError(getErrorMessage(err));
