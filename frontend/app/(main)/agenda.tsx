@@ -99,7 +99,7 @@ export default function AgendaScreen() {
       horario_atendimento: form.horario_atendimento.slice(0, 5), 
       id_servico: Number(form.id_servico),
       valor: Number(String(form.valor).replace(",", ".")),
-      status: form.status as "pendente" | "confirmado" | "cancelado",
+      status: form.status as "pendente" | "concluido" | "cancelado",
     };
 
     if (!payload.id_pet || !payload.id_servico || !payload.data_atendimento || !payload.valor) {
@@ -137,7 +137,7 @@ export default function AgendaScreen() {
   async function handleConcluir(id: number) {
     try {
       setError(null);
-      await atendimentoApi.updateStatus(id, "confirmado");
+      await atendimentoApi.updateStatus(id, "concludido");
       await load(); 
     } catch (err) {
       setError(getErrorMessage(err));
@@ -281,7 +281,7 @@ export default function AgendaScreen() {
                     {grupo.atendimentos.map((item) => {
                       const pet = petMap.get(item.id_pet);
                       const servico = servicoMap.get(item.id_servico);
-                      const isRealizado = item.status === "confirmado" ;
+                      const isRealizado = item.status === "concluido" ;
 
                       return (
                         <Card key={item.id} className="p-4 gap-3 bg-white border border-slate-100 shadow-sm">
