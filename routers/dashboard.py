@@ -120,7 +120,9 @@ def get_resumo_gerencial():
                 "mes": float(metricas["fat_mes"]),
                 "ano": float(metricas["fat_ano"])
             },
-            "ranking_pets": ranking_list
+            "ranking_pets": ranking_list,
+
+            "consolidado_ano_detalhado": consolidado_ano_detalhado
         }
 
     except Exception as e:
