@@ -32,19 +32,38 @@ def get_resumo_gerencial():
             # 2. ATENDIMENTOS E FATURAMENTO (Alinhado com a nova string 'concluido')
             # Regra: Faturamento soma apenas 'concluido'. Atendimentos conta tudo que não for 'cancelado'
             sql_metricas = """
-                SELECT 
+                    SELECT 
                     COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
                     COUNT(id) FILTER (WHERE data_atendimento >= :semana AND status != 'cancelado') as atend_semana,
                     COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes AND status != 'cancelado') as atend_mes,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano AND status != 'cancelado') as atend_ano,
-                    
                     COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'concluido'), 0) as fat_hoje,
                     COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'concluido'), 0) as fat_semana,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'concluido'), 0) as fat_mes,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'concluido'), 0) as fat_ano
+                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'concluido'), 0) as fat_mes
                 FROM atendimento
                 WHERE data_atendimento >= :inicio_ano
             """
+            metricas = conn.execute(text(sql_metricas), parametros_data).mappings().fetchone()
+
+            # 2.B NOVO: FATURAMENTO MENSAL DETALHADO (De Janeiro a Dezembro)
+            sql_meses = """
+                SELECT 
+                    EXTRACT(MONTH FROM TO_DATE(data_atendimento, 'DD/MM/YYYY')) as num_mes,
+                    COALESCE(SUM(valor), 0) as total_mes
+                FROM atendimento
+                WHERE TO_DATE(data_atendimento, 'DD/MM/YYYY') >= :inicio_ano
+                  AND status = 'concluido'
+                GROUP BY EXTRACT(MONTH FROM TO_DATE(data_atendimento, 'DD/MM/YYYY'))
+            """
+            result_meses = conn.execute(text(sql_meses), parametros_data).mappings().fetchall()
+            
+            # Mapeia o resultado do banco para garantir que todos os 12 meses existam no retorno
+            nomes_meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+            faturamento_por_mes = {int(row["num_mes"]): float(row["total_mes"]) for row in result_meses}
+            
+            consolidado_ano_detalhado = [
+                {"mes": nomes_meses[m - 1], "valor": faturamento_por_mes.get(m, 0.0)}
+                for m in range(1, 13)
+            ]
             metricas = conn.execute(text(sql_metricas), parametros_data).mappings().fetchone()
 
             # 3. DETALHAMENTO DE SERVIÇOS (Apenas os concluidos)
