@@ -2,17 +2,14 @@ import re
 from pydantic import BaseModel, Field, field_validator
 from datetime import date, time
 from decimal import Decimal
+from typing import Literal # 🟢 Importado para simplificar a validação
+
+# Define o tipo oficial aceito no sistema inteiro
+StatusAtendimento = Literal["pendente", "cancelado", "concluido"]
 
 class AtendimentoStatusUpdate(BaseModel):
-    status: str
-
-    @field_validator("status")
-    def validar_status(cls, value):
-        status_validos = ["pendente", "cancelado","concluido"]
-        valor_limpo = value.strip().lower()
-        if valor_limpo not in status_validos:
-            raise ValueError(f"Status inválido. Escolha entre: {', '.join(status_validos)}")
-        return valor_limpo
+    # 🟢 O Pydantic valida e rejeita automaticamente qualquer palavra fora da lista
+    status: StatusAtendimento 
 
 class Atendimento(BaseModel):
     id_pet: int = Field(..., gt=0, le=999)
@@ -20,7 +17,8 @@ class Atendimento(BaseModel):
     horario_atendimento: time = Field(...)
     id_servico: int = Field(..., gt=0)
     valor: Decimal = Field(..., gt=0, le=999.99, decimal_places=2)
-    status: str = Field(default="pendente")
+    status: StatusAtendimento = "pendente" # 🟢 Reutiliza o mesmo tipo com valor padrão
+
 
     @field_validator("data_atendimento", mode="before")
     def formatar_data_flexivel(cls, value):
