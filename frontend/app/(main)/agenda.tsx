@@ -151,7 +151,7 @@ export default function AgendaScreen() {
     return nomePet.includes(termoBusca) || tipoServico.includes(termoBusca);
   });
 
-  const gruposPorData = useMemo(() => {
+  const gruposPorAbas = useMemo(() => {
     const grupos: { [data: string]: Atendimento[] } = {};
 
     atendimentosFiltrados.forEach((item) => {
@@ -166,13 +166,105 @@ export default function AgendaScreen() {
       grupos[data].sort((a, b) => a.horario_atendimento.localeCompare(b.horario_atendimento));
     });
 
-    return Object.keys(grupos)
-      .sort((a, b) => b.localeCompare(a))
-      .map((data) => ({
-        data,
-        atendimentos: grupos[data],
-      }));
+    const converterParaData = (dataStr: string) => {
+      const [dia, mes, ano] = dataStr.split("/");
+      return new Date(Number(ano), Number(mes) - 1, Number(dia));
+    };
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const hojeLista: Array<{ data: string; atendimentos: Atendimento[] }> = [];
+    const proximosLista: Array<{ data: string; atendimentos: Atendimento[] }> = [];
+    const passadosLista: Array<{ data: string; atendimentos: Atendimento[] }> = [];
+
+    Object.keys(grupos).forEach((dataStr) => {
+      const dataObjeto = converterParaData(dataStr);
+      const itemGrupo = { data: dataStr, atendimentos: grupos[dataStr] };
+
+      if (dataObjeto.getTime() === hoje.getTime()) {
+        hojeLista.push(itemGrupo);
+      } else if (dataObjeto > hoje) {
+        proximosLista.push(itemGrupo);
+      } else {
+        passadosLista.push(itemGrupo);
+      }
+    });
+
+    proximosLista.sort((a, b) => converterParaData(a.data).getTime() - converterParaData(b.data).getTime());
+    passadosLista.sort((a, b) => converterParaData(b.data).getTime() - converterParaData(a.data).getTime());
+
+    return {
+      hoje: hojeLista,
+      proximos: proximosLista,
+      passados: passadosLista,
+    };
   }, [atendimentosFiltrados]);
+
+  function renderizarCards(atendimentosLista: Atendimento[]) {
+    return atendimentosLista.map((item) => {
+      const pet = petMap.get(item.id_pet);
+      const servico = servicoMap.get(item.id_servico);
+      const isRealizado = item.status === "concluido";
+
+      return (
+        <Card key={item.id} className="p-4 gap-3 bg-white border border-slate-100 shadow-sm">
+          <View className="flex-row justify-between items-start">
+            <View>
+              <Text className="text-base font-semibold text-slate-900">
+                {pet ? pet.nome_pet : `Pet #${item.id_pet}`}
+              </Text>
+              <Text className="text-sm text-slate-500">
+                {servico ? servico.tipo_servico : `Serviço #${item.id_servico}`}
+              </Text>
+            </View>
+            
+            <View className="items-end gap-1">
+              <Text className="text-sm font-bold text-slate-900">
+                {item.horario_atendimento.slice(0, 5)}
+              </Text>
+              <View className={`px-2 py-0.5 rounded-full ${isRealizado ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                <Text className={`text-xs font-medium ${isRealizado ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {isRealizado ? 'Realizado' : 'Pendente'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View className="flex-row justify-between items-center border-t border-slate-100 pt-3">
+            <Text className="text-base font-bold text-slate-700">
+              {formatMoney(item.valor)}
+            </Text>
+            
+            <View className="flex-row gap-2">
+              {!isRealizado && (
+                <Pressable 
+                  onPress={() => handleConcluir(item.id)}
+                  className="bg-emerald-600 px-3 py-1.5 rounded-md active:bg-emerald-700"
+                >
+                  <Text className="text-white text-xs font-semibold">Conclusão</Text>
+                </Pressable>
+              )}
+              
+              <Pressable 
+                onPress={() => openEdit(item)}
+                className="bg-slate-100 px-3 py-1.5 rounded-md active:bg-slate-200"
+              >
+                <Text className="text-slate-700 text-xs font-medium">Editar</Text>
+              </Pressable>
+
+              <Pressable 
+                onPress={() => handleDelete(item.id)}
+                className="bg-red-50 px-3 py-1.5 rounded-md active:bg-red-100"
+              >
+                <Text className="text-red-600 text-xs font-medium">Excluir</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Card>
+      );
+    });
+  }
 
   return (
     <Screen
@@ -247,7 +339,7 @@ export default function AgendaScreen() {
             </View>
 
             <View className="gap-1">
-              <Text className="text-sm font-medium text-slate-600">Valor Cobrado (R$)</Text>
+              <Text className="text-sm font-medium text-slate-600">Valor Cobrado (R\$)</Text>
               <TextInput
                 style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#ffffff' }}
                 placeholder="0.00"
@@ -267,82 +359,53 @@ export default function AgendaScreen() {
               value={busca}
               onChangeText={setBusca} label={""}          />
 
-          {gruposPorData.length === 0 ? (
+          {atendimentosFiltrados.length === 0 ? (
             <EmptyState title="Nenhum atendimento" subtitle="Nenhum atendimento agendado encontrado." />
           ) : (
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-              {gruposPorData.map((grupo) => (
-                <View key={grupo.data} className="mb-6">
-                  <Text className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    {grupo.data}
+              
+              {/* --- HOJE --- */}
+              {gruposPorAbas.hoje.map((grupo) => (
+                <View key={grupo.data} className="mb-6 bg-slate-50 p-2 rounded-xl border border-slate-200/60">
+                  <Text className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-2 px-2">
+                    ☀️ Hoje ({grupo.data})
                   </Text>
-                  
                   <View className="gap-3">
-                    {grupo.atendimentos.map((item) => {
-                      const pet = petMap.get(item.id_pet);
-                      const servico = servicoMap.get(item.id_servico);
-                      const isRealizado = item.status === "concluido" ;
-
-                      return (
-                        <Card key={item.id} className="p-4 gap-3 bg-white border border-slate-100 shadow-sm">
-                          <View className="flex-row justify-between items-start">
-                            <View>
-                              <Text className="text-base font-semibold text-slate-900">
-                                {pet ? pet.nome_pet : `Pet #${item.id_pet}`}
-                              </Text>
-                              <Text className="text-sm text-slate-500">
-                                {servico ? servico.tipo_servico : `Serviço #${item.id_servico}`}
-                              </Text>
-                            </View>
-                            
-                            <View className="items-end gap-1">
-                              <Text className="text-sm font-bold text-slate-900">
-                                {item.horario_atendimento.slice(0, 5)}
-                              </Text>
-                              <View className={`px-2 py-0.5 rounded-full ${isRealizado ? 'bg-emerald-100' : 'bg-amber-100'}`}>
-                                <Text className={`text-xs font-medium ${isRealizado ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                  {isRealizado ? 'Realizado' : 'Pendente'}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-
-                          <View className="flex-row justify-between items-center border-t border-slate-100 pt-3">
-                            <Text className="text-base font-bold text-slate-700">
-                              {formatMoney(item.valor)}
-                            </Text>
-                            
-                            <View className="flex-row gap-2">
-                              {!isRealizado && (
-                                <Pressable 
-                                  onPress={() => handleConcluir(item.id)}
-                                  className="bg-emerald-600 px-3 py-1.5 rounded-md active:bg-emerald-700"
-                                >
-                                  <Text className="text-white text-xs font-semibold">Concluir</Text>
-                                </Pressable>
-                              )}
-                              
-                              <Pressable 
-                                onPress={() => openEdit(item)}
-                                className="bg-slate-100 px-3 py-1.5 rounded-md active:bg-slate-200"
-                              >
-                                <Text className="text-slate-700 text-xs font-medium">Editar</Text>
-                              </Pressable>
-
-                              <Pressable 
-                                onPress={() => handleDelete(item.id)}
-                                className="bg-red-50 px-3 py-1.5 rounded-md active:bg-red-100"
-                              >
-                                <Text className="text-red-600 text-xs font-medium">Excluir</Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                        </Card>
-                      );
-                    })}
+                    {renderizarCards(grupo.atendimentos)}
                   </View>
                 </View>
               ))}
+
+              {/* --- PRÓXIMOS DIAS --- */}
+              {gruposPorAbas.proximos.length > 0 && (
+                <View className="mb-6">
+                  <Text className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-3 bg-blue-50/50 py-1 px-2 rounded self-start">
+                    🗓️ Próximos Agendamentos
+                  </Text>
+                  {gruposPorAbas.proximos.map((grupo) => (
+                    <View key={grupo.data} className="mb-4 pl-2 border-l-2 border-blue-200">
+                      <Text className="text-sm font-semibold text-slate-500 mb-2">{grupo.data}</Text>
+                      <View className="gap-3">{renderizarCards(grupo.atendimentos)}</View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* --- JÁ PASSARAM --- */}
+              {gruposPorAbas.passados.length > 0 && (
+                <View className="mb-6 opacity-75">
+                  <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 bg-slate-100 py-1 px-2 rounded self-start">
+                    ↩️ Histórico / Dias Passados
+                  </Text>
+                  {gruposPorAbas.passados.map((grupo) => (
+                    <View key={grupo.data} className="mb-4 pl-2 border-l-2 border-slate-200">
+                      <Text className="text-sm font-semibold text-slate-400 mb-2">{grupo.data}</Text>
+                      <View className="gap-3">{renderizarCards(grupo.atendimentos)}</View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
             </ScrollView>
           )}
         </View>
