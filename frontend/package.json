@@ -38,9 +38,9 @@
     "postcss": "^8.4.49",
     "typescript": "~5.8.3"
   },
-  "overrides": {
-    "metro": "0.80.12",
-    "metro-resolver": "0.80.12"
+      "overrides": {
+    "metro": "^0.84.4",
+    "metro-resolver": "^0.84.4"
   }
 }
 
