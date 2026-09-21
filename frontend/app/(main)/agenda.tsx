@@ -29,6 +29,7 @@ export default function AgendaScreen() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [busca, setBusca] = useState("");
+  const [buscaPetForm, setBuscaPetForm] = useState("");
 
   const petMap = useMemo(() => new Map(pets.map((pet) => [pet.id, pet])), [pets]);
   const servicoMap = useMemo(
@@ -73,6 +74,7 @@ export default function AgendaScreen() {
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm);
+    setBuscaPetForm("");
     setFormOpen(true);
   }
 
@@ -86,6 +88,7 @@ export default function AgendaScreen() {
       valor: String(item.valor),
       status: item.status || "pendente",
     });
+    setBuscaPetForm("");
     setFormOpen(true);
   }
 
