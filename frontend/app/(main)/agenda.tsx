@@ -45,6 +45,12 @@ export default function AgendaScreen() {
     return [...servicos].sort((a, b) => a.tipo_servico.localeCompare(b.tipo_servico));
   }, [servicos]);
 
+  const petsFiltradosNoForm = useMemo(() => {
+    return petsOrdenados.filter((pet) =>
+      pet.nome_pet.toLowerCase().includes(buscaPetForm.toLowerCase())
+    );
+  }, [petsOrdenados, buscaPetForm]);
+
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
