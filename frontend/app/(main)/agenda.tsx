@@ -347,18 +347,22 @@ export default function AgendaScreen() {
         ))}
       </View>
 
-           <View className="gap-1">
-              <Text className="text-sm text-slate-500 font-medium">Selecione o pet</Text>
+           <View className="gap-2">
+              <Text className="text-sm font-semibold text-slate-700">Buscar Pet para o Atendimento</Text>
               <TextInput
-                style={{ height: 40, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#f8fafc', fontSize: 13 }}
-                placeholder="🔍 Digite para buscar o pet..."
+                style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, paddingHorizontal: 14, backgroundColor: '#f8fafc', fontSize: 14 }}
+                placeholder="🔍 Digite o nome do pet..."
                 value={buscaPetForm}
                 onChangeText={(txt) => setBuscaPetForm(txt)}
               />
+              
               <View className="flex-row flex-wrap gap-2 mt-1">
-                {petsFiltradosNoForm.length === 0 ? (
-                  <Text className="text-xs text-slate-400 italic p-1">Nenhum pet encontrado.</Text>
+                {buscaPetForm.trim() === "" ? (
+                  <Text className="text-xs text-slate-400 italic p-1">Digite acima para listar os pets...</Text>
+                ) : petsFiltradosNoForm.length === 0 ? (
+                  <Text className="text-xs text-red-400 italic p-1">Nenhum pet encontrado com este nome.</Text>
                 ) : (
+                  // Só renderiza os chips dos pets que combinam com o que foi digitado
                   petsFiltradosNoForm.map((pet) => (
                     <Chip
                       key={pet.id}
