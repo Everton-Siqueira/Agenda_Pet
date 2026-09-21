@@ -37,10 +37,6 @@
     "@types/react": "~19.0.10",
     "postcss": "^8.4.49",
     "typescript": "~5.8.3"
-  },
-      "overrides": {
-    "metro": "^0.84.4",
-    "metro-resolver": "^0.84.4"
   }
 }
 
