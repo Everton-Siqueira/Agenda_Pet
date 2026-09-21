@@ -295,59 +295,8 @@ export default function AgendaScreen() {
               {editingId ? "Editar atendimento" : "Novo atendimento"}
             </Text>
             
-            <Text className="text-sm text-slate-500 font-medium">Selecione o pet (A-Z)</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {petsOrdenados.map((pet) => (
-                <Chip
-                  key={pet.id}
-                  label={`${pet.nome_pet} (#${pet.id})`}
-                  selected={form.id_pet === String(pet.id)}
-                  onPress={() => setForm((current) => ({ ...current, id_pet: String(pet.id) }))}
-                />
-              ))}
-            </View>
-            
-            <Text className="text-sm text-slate-500 font-medium">Selecione o serviço (A-Z)</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {servicosOrdenados.map((servico) => (
-                <Chip
-                  key={servico.id}
-                  label={`${servico.tipo_servico} (${formatMoney(servico.valor)})`}
-                  selected={form.id_servico === String(servico.id)}
-                  onPress={() =>
-                    setForm((current) => ({
-                      ...current,
-                      id_servico: String(servico.id),
-                      valor: String(servico.valor),
-                    }))
-                  }
-                />
-              ))}
-            </View>
-  
-            <View className="gap-1">
-              <Text className="text-sm font-medium text-slate-600">Data (DD/MM/AAAA)</Text>
-              <TextInput
-                style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#ffffff' }}
-                placeholder="18/09/2026"
-                value={form.data_atendimento}
-                onChangeText={(txt) => setForm((current) => ({ ...current, data_atendimento: txt }))}
-              />
-            </View>
-            
-            <Text className="text-sm font-medium text-slate-600">Horário</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {TIME_SLOTS.map((slot) => (
-          <Chip
-            key={slot}
-            label={slot}
-            selected={form.horario_atendimento === slot}
-            onPress={() => setForm((current) => ({ ...current, horario_atendimento: slot }))}
-          />
-        ))}
-      </View>
-
-           <View className="gap-2">
+            {/* 🟢 SELEÇÃO DE PET (Apenas Busca Dinâmica e Limpa) */}
+            <View className="gap-2">
               <Text className="text-sm font-semibold text-slate-700">Buscar Pet para o Atendimento</Text>
               <TextInput
                 style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, paddingHorizontal: 14, backgroundColor: '#f8fafc', fontSize: 14 }}
@@ -362,7 +311,6 @@ export default function AgendaScreen() {
                 ) : petsFiltradosNoForm.length === 0 ? (
                   <Text className="text-xs text-red-400 italic p-1">Nenhum pet encontrado com este nome.</Text>
                 ) : (
-                  // Só renderiza os chips dos pets que combinam com o que foi digitado
                   petsFiltradosNoForm.map((pet) => (
                     <Chip
                       key={pet.id}
@@ -377,7 +325,23 @@ export default function AgendaScreen() {
             
             {/* --- SELEÇÃO DE SERVIÇO --- */}
             <View className="gap-1">
-              
+              <Text className="text-sm text-slate-500 font-medium">Selecione o serviço (A-Z)</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {servicosOrdenados.map((servico) => (
+                  <Chip
+                    key={servico.id}
+                    label={`${servico.tipo_servico} (${formatMoney(servico.valor)})`}
+                    selected={form.id_servico === String(servico.id)}
+                    onPress={() =>
+                      setForm((current) => ({
+                        ...current,
+                        id_servico: String(servico.id),
+                        valor: String(servico.valor),
+                      }))
+                    }
+                  />
+                ))}
+              </View>
             </View>
             
             {/* --- DATA --- */}
@@ -422,7 +386,7 @@ export default function AgendaScreen() {
           </Card>
         </ScrollView>
       ) : (
-        <View className="flex-1 gap-4">
+      <View className="flex-1 gap-4">
           <Input
               placeholder="Buscar por pet ou serviço..."
               value={busca}
