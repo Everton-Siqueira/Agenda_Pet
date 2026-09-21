@@ -1,7 +1,16 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
-// Cole aqui o link completo que o ngrok gerou no seu terminal (deve começar com https://)
-export const API_URL = 'https://clavicle-groggily-devoutly.ngrok-free.dev';
+const getBaseUrl = () => {
+  // Se for o navegador do PC, usa o localhost direto (evita a trava de segurança do Ngrok no PC)
+  if (Platform.OS === 'web') {
+    return 'http://localhost:8000';
+  }
+  // Se for o celular, usa o link seguro do Ngrok para conectar pela internet
+  return 'https://ngrok-free.dev';
+};
+
+export const API_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: API_URL,
