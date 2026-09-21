@@ -324,7 +324,7 @@ export default function AgendaScreen() {
                 />
               ))}
             </View>
-            
+  
             <View className="gap-1">
               <Text className="text-sm font-medium text-slate-600">Data (DD/MM/AAAA)</Text>
               <TextInput
@@ -338,15 +338,87 @@ export default function AgendaScreen() {
             <Text className="text-sm font-medium text-slate-600">Horário</Text>
             <View className="flex-row flex-wrap gap-2">
               {TIME_SLOTS.map((slot) => (
-                <Chip
-                  key={slot}
-                  label={slot}
-                  selected={form.horario_atendimento === slot}
-                  onPress={() => setForm((current) => ({ ...current, horario_atendimento: slot }))}
-                />
-              ))}
+          <Chip
+            key={slot}
+            label={slot}
+            selected={form.horario_atendimento === slot}
+            onPress={() => setForm((current) => ({ ...current, horario_atendimento: slot }))}
+          />
+        ))}
+      </View>
+
+           <View className="gap-1">
+              <Text className="text-sm text-slate-500 font-medium">Selecione o pet</Text>
+              <TextInput
+                style={{ height: 40, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#f8fafc', fontSize: 13 }}
+                placeholder="🔍 Digite para buscar o pet..."
+                value={buscaPetForm}
+                onChangeText={(txt) => setBuscaPetForm(txt)}
+              />
+              <View className="flex-row flex-wrap gap-2 mt-1">
+                {petsFiltradosNoForm.length === 0 ? (
+                  <Text className="text-xs text-slate-400 italic p-1">Nenhum pet encontrado.</Text>
+                ) : (
+                  petsFiltradosNoForm.map((pet) => (
+                    <Chip
+                      key={pet.id}
+                      label={`${pet.nome_pet} (#${pet.id})`}
+                      selected={form.id_pet === String(pet.id)}
+                      onPress={() => setForm((current) => ({ ...current, id_pet: String(pet.id) }))}
+                    />
+                  ))
+                )}
+              </View>
+            </View>
+            
+            {/* --- SELEÇÃO DE SERVIÇO --- */}
+            <View className="gap-1">
+              <Text className="text-sm text-slate-500 font-medium">Selecione o serviço (A-Z)</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {servicosOrdenados.map((servico) => (
+                  <Chip
+                    key={servico.id}
+                    label={`${servico.tipo_servico} (${formatMoney(servico.valor)})`}
+                    selected={form.id_servico === String(servico.id)}
+                    onPress={() =>
+                      setForm((current) => ({
+                        ...current,
+                        id_servico: String(servico.id),
+                        valor: String(servico.valor),
+                      }))
+                    }
+                  />
+                ))}
+              </View>
+            </View>
+            
+            {/* --- DATA --- */}
+            <View className="gap-1">
+              <Text className="text-sm font-medium text-slate-600">Data (DD/MM/AAAA)</Text>
+              <TextInput
+                style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#ffffff' }}
+                placeholder="18/09/2026"
+                value={form.data_atendimento}
+                onChangeText={(txt) => setForm((current) => ({ ...current, data_atendimento: txt }))}
+              />
+            </View>
+            
+            {/* --- HORÁRIO --- */}
+            <View className="gap-1">
+              <Text className="text-sm font-medium text-slate-600">Horário</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {TIME_SLOTS.map((slot) => (
+                  <Chip
+                    key={slot}
+                    label={slot}
+                    selected={form.horario_atendimento === slot}
+                    onPress={() => setForm((current) => ({ ...current, horario_atendimento: slot }))}
+                  />
+                ))}
+              </View>
             </View>
 
+            {/* --- VALOR COBRADO --- */}
             <View className="gap-1">
               <Text className="text-sm font-medium text-slate-600">Valor Cobrado (R\$)</Text>
               <TextInput
