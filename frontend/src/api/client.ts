@@ -7,7 +7,7 @@ const getBaseUrl = () => {
     return 'http://localhost:8000';
   }
   // Se for o celular, usa o link seguro do Ngrok para conectar pela internet
-  return 'https://ngrok-free.dev';
+  return 'https://clavicle-groggily-devoutly.ngrok-free.dev';
 };
 
 export const API_URL = getBaseUrl();
