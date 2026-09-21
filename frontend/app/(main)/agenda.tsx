@@ -377,23 +377,7 @@ export default function AgendaScreen() {
             
             {/* --- SELEÇÃO DE SERVIÇO --- */}
             <View className="gap-1">
-              <Text className="text-sm text-slate-500 font-medium">Selecione o serviço (A-Z)</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {servicosOrdenados.map((servico) => (
-                  <Chip
-                    key={servico.id}
-                    label={`${servico.tipo_servico} (${formatMoney(servico.valor)})`}
-                    selected={form.id_servico === String(servico.id)}
-                    onPress={() =>
-                      setForm((current) => ({
-                        ...current,
-                        id_servico: String(servico.id),
-                        valor: String(servico.valor),
-                      }))
-                    }
-                  />
-                ))}
-              </View>
+              
             </View>
             
             {/* --- DATA --- */}
