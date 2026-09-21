@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 
 // Substitua pelo IP atual da sua rede Wi-Fi obtido no 'ipconfig'
-const IP_DA_SUA_REDE = "192.168.100.116"; 
+const IP_DA_SUA_REDE = "192.168.100.120"; 
 
 const getBaseUrl = () => {
   // Se estiver rodando no Navegador do PC (Web)
