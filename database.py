@@ -23,13 +23,7 @@ def testar_conexao():
             con.execute(text("SELECT 1"))
             print("Conexão com o PostgreSQL realizada com sucesso!")
             
-            # 2. Executa a criação da coluna de forma direta (sem o con.begin())
-            con.execute(text("""
-                ALTER TABLE atendimento
-                ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pendente' NOT NULL;
-            """))
-            print("Estrutura da tabela atualizada: Coluna 'status' pronta!")
-            
+                        
     except Exception as e:
         print(f"Erro ao conectar ou atualizar o banco de dados: {e}")
 
