@@ -1,52 +1,44 @@
-import re
-import logging
-import jwt
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer
-from classes.login import LoginRequest, LoginResponse
-from sqlalchemy import text
-from database import engine
+from fastapi import APIRouter, HTTPException, status, Depends
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from classes.login import LoginSchema
+from security import verificar_senha, criar_token_acesso
+from database import get_db
 
-router = APIRouter(prefix="/login", tags=["Login"])
+router = APIRouter(prefix="/api/login", tags=["Autenticação"])
 
 @router.post("")
-def login(login_request: LoginRequest):
+def login(dados_login: LoginSchema, conn = Depends(get_db)):
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        with engine.begin() as conn:
-            sql = """SELECT id, email, senha, id_empresa
-                FROM empresa
-                WHERE email = :email"""
-
-            result = conn.execute(text(sql), {"email": login_request.email})
-            tutor = result.fetchone()
-
-            if tutor is None:
-                raise HTTPException(
-                    status_code=401,
-                    detail="Credenciais inválidas."
-                )
-
-            if tutor.senha != login_request.senha:
-                raise HTTPException(
-                    status_code=401,
-                    detail="Credenciais inválidas."
-                )
-
-            # Gerar token JWT
-            payload = {
-                "id": tutor.id,
-                "nome": tutor.nome,
-                "email": tutor.email
+        # Busca o funcionário pelo e-mail
+        query = "SELECT id, empresa_id, senha_hash, nome, cargo FROM funcionarios WHERE email = %s AND ativo = TRUE;"
+        cursor.execute(query, (dados_login.email,))
+        funcionario = cursor.fetchone()
+        
+        # Erro genérico de login impede ataques de força bruta que tentam adivinhar e-mails válidos
+        if not funcionario or not verificar_senha(dados_login.senha, funcionario["senha_hash"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="E-mail ou senha incorretos."
+            )
+            
+        # Monta a carga (payload) do token com os dados que o back-end vai precisar conferir depois
+        dados_do_token = {
+            "sub": str(funcionario["id"]),
+            "empresa_id": str(funcionario["empresa_id"]),
+            "cargo": funcionario["cargo"]
+        }
+        
+        token = criar_token_acesso(dados_do_token)
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "usuario": {
+                "nome": funcionario["nome"],
+                "cargo": funcionario["cargo"]
             }
-            token = jwt.encode(payload, "sua_chave_secreta", algorithm="HS256")
-
-            return LoginResponse(token=token)
-
-    except Exception as e:
-        logging.error(f"Erro ao realizar login: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Erro interno do servidor."
-        )
-
-
+        }
+    finally:
+        cursor.close()
