@@ -14,6 +14,14 @@ if not DATABASE_URL:
 # Cria o pool de conexões reutilizável para a aplicação
 engine = create_engine(DATABASE_URL)
 
+# --- ADICIONE ESTA FUNÇÃO GENERATOR PARA O FASTAPI ---
+def get_db():
+    """Fornece uma conexão limpa do banco de dados para cada requisição do FastAPI."""
+    connection = engine.connect()
+    try:
+        yield connection
+    finally:
+        connection.close()
 
 def testar_conexao():
     """Apenas testa se o banco de dados do pgAdmin está acessível e atualiza a estrutura."""

@@ -6,6 +6,8 @@ from routers import tutor
 from routers import servico
 from routers import atendimento
 from routers import dashboard
+from routers import empresa
+from routers import login
 
 app=FastAPI(
     title="API Petshop",
@@ -29,6 +31,8 @@ app.include_router(tutor.router)
 app.include_router(servico.router)
 app.include_router(atendimento.router)
 app.include_router(dashboard.router)
+app.include_router(empresa.router)
+app.include_router(login.router)
 
 
 
