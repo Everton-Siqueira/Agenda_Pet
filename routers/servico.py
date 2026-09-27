@@ -1,160 +1,59 @@
-from database import engine
-from fastapi import APIRouter, HTTPException
-from classes.servico import Servico
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
-
+from database import engine
+from security import obter_usuario_logado
 
 router = APIRouter(prefix="/servico", tags=["Serviço"])
 
 @router.post("")
-def create_servico(servico: Servico):
+def create_servico(servico: dict, usuario: dict = Depends(obter_usuario_logado)):
     try:
         with engine.begin() as conn:
-            sql = """
-                SELECT id
-                FROM servico
-                WHERE tipo_servico = :tipo_servico
-            """
-
-            result = conn.execute(
-                text(sql),
-                {"tipo_servico": servico.tipo_servico}
-            )
-
-            id_existente = result.scalar()
-
-            if id_existente is not None:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Serviço já cadastrado."
-                )
-
-
-
-            sql = """INSERT INTO servico (tipo_servico, valor) 
-                    VALUES (:tipo_servico, :valor)
-                    RETURNING id
-                    """
-
-            
+            sql = """INSERT INTO servico (nome_servico, preco, empresa_id) 
+                    VALUES (:nome_servico, :preco, :empresa_id) RETURNING id"""
             dados = {
-                "tipo_servico": servico.tipo_servico,
-                "valor": servico.valor
+                "nome_servico": servico.get("nome_servico"),
+                "preco": servico.get("preco"),
+                "empresa_id": usuario["empresa_id"]
             }
-
             result = conn.execute(text(sql), dados)
+            return {"message": "Serviço criado com sucesso!", "id": result.fetchone()}
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
-            id_servico = result.scalar()
-
-            return {"id": id_servico,
-                    "tipo_servico": servico.tipo_servico,
-                    "valor": servico.valor
-            }
-
-    except HTTPException:
-        raise        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao criar serviço: {str(e)}"  
-        )     
-    
-    
 @router.get("")
-def get_servicos():  
+def get_servicos(usuario: dict = Depends(obter_usuario_logado)):
     try:
         with engine.connect() as conn:
-            sql = """SELECT * FROM servico"""
-            result = conn.execute(text(sql))
-            servicos = [dict(row._mapping) for row in result]
-            return servicos
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao buscar serviços: {str(e)}"
-        )
+            sql = """SELECT * FROM servico WHERE empresa_id = :empresa_id"""
+            result = conn.execute(text(sql), {"empresa_id": usuario["empresa_id"]})
+            return [dict(row._mapping) for row in result]
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
-    
-@router.get("/{servico_id}")
-def get_servico(servico_id: int):   
-    try:
-        with engine.connect() as conn:
-            sql = """SELECT * FROM servico WHERE id = :servico_id"""
-            result = conn.execute(text(sql), {"servico_id": servico_id})
-            servico = result.fetchone()
-            if servico:
-                return dict(servico._mapping)
-            else:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Serviço não encontrado"
-                )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao buscar serviço: {str(e)}"
-        )
-
-    
 @router.put("/{servico_id}")
-def update_servico(servico_id: int, servico: Servico):
+def update_servico(servico_id: int, servico: dict, usuario: dict = Depends(obter_usuario_logado)):  
     try:
         with engine.begin() as conn:
-            sql = """UPDATE servico 
-                    SET tipo_servico = :tipo_servico, valor = :valor 
-                    WHERE id = :servico_id"""
-
+            sql = """UPDATE servico SET nome_servico = :nome_servico, preco = :preco 
+                    WHERE id = :servico_id AND empresa_id = :empresa_id"""
             dados = {
-                "tipo_servico": servico.tipo_servico,
-                "valor": servico.valor,
-                "servico_id": servico_id
+                "nome_servico": servico.get("nome_servico"),
+                "preco": servico.get("preco"),
+                "servico_id": servico_id,
+                "empresa_id": usuario["empresa_id"]
             }
-
             result = conn.execute(text(sql), dados)
-           
-
-            if result.rowcount == 0:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Serviço não encontrado"
-                )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao atualizar serviço: {str(e)}"
-        )
-
-    return {"message": "Serviço atualizado com sucesso!"}
+            if result.rowcount == 0: raise HTTPException(status_code=404, detail="Serviço não encontrado")
+            return {"message": "Serviço atualizado com sucesso!"}
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{servico_id}")
-def delete_servico(servico_id: int):
+def delete_servico(servico_id: int, usuario: dict = Depends(obter_usuario_logado)):    
     try:
         with engine.begin() as conn:
-            sql = """DELETE FROM servico WHERE id = :servico_id"""
-            result = conn.execute(text(sql), {"servico_id": servico_id})
-            
-
-            if result.rowcount == 0:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Serviço não encontrado"
-                )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao deletar serviço: {str(e)}"
-        )
-
-    return {"message": "Serviço deletado com sucesso!"} 
-
-    
+            sql = """DELETE FROM servico WHERE id = :servico_id AND empresa_id = :empresa_id"""
+            result = conn.execute(text(sql), {"servico_id": servico_id, "empresa_id": usuario["empresa_id"]})
+            if result.rowcount == 0: raise HTTPException(status_code=404, detail="Serviço não encontrado")
+            return {"message": "Serviço deletado com sucesso!"}
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))

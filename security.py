@@ -1,31 +1,41 @@
-from datetime import datetime, timedelta, timezone
-from passlib.context import CryptContext
-import jwt  # Importa a biblioteca PyJWT instalada
+import jwt
+from datetime import datetime, timezone
+from fastapi import HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordBearer
 
-# CONFIGURAÇÕES DE SEGURANÇA (Mantenha segredo em produção!)
-SECRET_KEY = "sua_chave_secreta_super_dificil_e_longa_aqui" 
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480 # O token expira em 8 horas (um turno de trabalho)
+# Diz ao FastAPI onde o token deve ser enviado (geralmente via Header)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ... mantenha suas funções anteriores (gerar_senha_hash, verificar_senha, criar_token_acesso) ...
 
-def gerar_senha_hash(senha_plana: str) -> str:
-    return pwd_context.hash(senha_plana)
-
-def verificar_senha(senha_plana: str, senha_hash: str) -> bool:
-    return pwd_context.verify(senha_plana, senha_hash)
-
-# --- NOVA FUNÇÃO ABAIXO ---
-def criar_token_acesso(dados: dict) -> str:
-    """Gera o Token JWT contendo as informações do funcionário e empresa."""
-    dados_para_criptografar = dados.copy()
+def obter_usuario_logado(token: str = Depends(oauth2_scheme)) -> dict:
+    """
+    Decodifica o JWT, valida a expiração e retorna os dados do funcionário.
+    Se o token estiver quebrado ou expirado, bloqueia o acesso imediatamente.
+    """
+    credenciais_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Acesso negado. Token inválido ou expirado.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     
-    # Define o tempo de expiração do token usando fuso horário UTC (padrão recomendado em 2026)
-    tempo_expiracao = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    # O campo 'exp' é o padrão do JWT para checar validade automaticamente
-    dados_para_criptografar.update({"exp": tempo_expiracao})
-    
-    # Cria e assina o Token
-    token_jwt = jwt.encode(dados_para_criptografar, SECRET_KEY, algorithm=ALGORITHM)
-    return token_jwt
+    try:
+        # Decodifica o token usando a sua chave secreta
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        funcionario_id: str = payload.get("sub")
+        empresa_id: str = payload.get("empresa_id")
+        cargo: str = payload.get("cargo")
+        
+        if funcionario_id is None or empresa_id is None:
+            raise credenciais_exception
+            
+        # Retorna um dicionário com os dados limpos para a rota usar
+        return {
+            "funcionario_id": funcionario_id,
+            "empresa_id": empresa_id,
+            "cargo": cargo
+        }
+        
+    except jwt.PyJWTError:
+        raise credenciais_exception

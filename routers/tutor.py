@@ -1,164 +1,81 @@
-from classes.tutor import Tutor
-from database import engine
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
+from database import engine
+from security import obter_usuario_logado
 
 router = APIRouter(prefix="/tutor", tags=["Tutor"])
 
-
 @router.post("")
-def create_tutor(tutor: Tutor):
+def create_tutor(tutor: dict, usuario: dict = Depends(obter_usuario_logado)):
     try:
         with engine.begin() as conn:
-            # RETURNING id permite resgatar a chave primária criada pelo PostgreSQL
-            sql = """INSERT INTO tutor (nome, celular, endereco) 
-                    VALUES (:nome, :celular, :endereco)
+            sql = """INSERT INTO tutor (nome_tutor, email, telefone, empresa_id) 
+                    VALUES (:nome_tutor, :email, :telefone, :empresa_id)
                     RETURNING id"""
-
+                    
             dados = {
-                "nome": tutor.nome,
-                "celular": tutor.celular,
-                "endereco": tutor.endereco,
+                "nome_tutor": tutor.get("nome_tutor"),
+                "email": tutor.get("email"),
+                "telefone": tutor.get("telefone"),
+                "empresa_id": usuario["empresa_id"]
             }
-
             result = conn.execute(text(sql), dados)
-            tutor_id = result.fetchone()[0]
-
-            return {
-                "message": "Tutor criado com sucesso!",
-                "id": tutor_id,
-            }
-
+            tutor_id = result.fetchone()
+            return {"message": "Tutor criado com sucesso!", "id": tutor_id}
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao criar tutor: {str(e)}",
-        )
-
+        raise HTTPException(status_code=500, detail=f"Erro ao criar tutor: {str(e)}")
 
 @router.get("")
-def get_tutores():
+def get_tutores(usuario: dict = Depends(obter_usuario_logado)):
     try:
         with engine.connect() as conn:
-            sql = """SELECT * FROM tutor"""
-            result = conn.execute(text(sql))
-            tutores = [dict(row._mapping) for row in result]
-            return tutores
-
+            sql = """SELECT * FROM tutor WHERE empresa_id = :empresa_id"""
+            result = conn.execute(text(sql), {"empresa_id": usuario["empresa_id"]})
+            return [dict(row._mapping) for row in result]
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao buscar tutores: {str(e)}",
-        )
-
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar tutores: {str(e)}")
 
 @router.get("/{tutor_id}")
-def get_tutor(tutor_id: int):
+def get_tutor(tutor_id: int, usuario: dict = Depends(obter_usuario_logado)):   
     try:
         with engine.connect() as conn:
-            sql = """SELECT * FROM tutor WHERE id = :tutor_id"""
-            result = conn.execute(text(sql), {"tutor_id": tutor_id})
+            sql = """SELECT * FROM tutor WHERE id = :tutor_id AND empresa_id = :empresa_id"""
+            result = conn.execute(text(sql), {"tutor_id": tutor_id, "empresa_id": usuario["empresa_id"]})
             tutor = result.fetchone()
-
             if tutor:
                 return dict(tutor._mapping)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Tutor não encontrado",
-                )
-
-    # Garante que o erro 404 passe direto para o FastAPI
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao buscar tutor: {str(e)}",
-        )
-
+            raise HTTPException(status_code=404, detail="Tutor não encontrado")
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{tutor_id}")
-def update_tutor(tutor_id: int, tutor: Tutor):
+def update_tutor(tutor_id: int, tutor: dict, usuario: dict = Depends(obter_usuario_logado)):  
     try:
         with engine.begin() as conn:
-            sql = """UPDATE tutor 
-                    SET nome = :nome, celular = :celular, endereco = :endereco 
-                    WHERE id = :tutor_id"""
-
+            sql = """UPDATE tutor SET nome_tutor = :nome_tutor, email = :email, telefone = :telefone 
+                    WHERE id = :tutor_id AND empresa_id = :empresa_id"""
             dados = {
-                "nome": tutor.nome,
-                "celular": tutor.celular,
-                "endereco": tutor.endereco,
+                "nome_tutor": tutor.get("nome_tutor"),
+                "email": tutor.get("email"),
+                "telefone": tutor.get("telefone"),
                 "tutor_id": tutor_id,
+                "empresa_id": usuario["empresa_id"]
             }
-
             result = conn.execute(text(sql), dados)
-
             if result.rowcount == 0:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Tutor não encontrado",
-                )
-
+                raise HTTPException(status_code=404, detail="Tutor não encontrado")
             return {"message": "Tutor atualizado com sucesso!"}
-
-    # Re-lança o HTTPException para não ser capturado pelo erro 500 genérico
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao atualizar tutor: {str(e)}",
-        )
-
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{tutor_id}")
-def delete_tutor(tutor_id: int):
+def delete_tutor(tutor_id: int, usuario: dict = Depends(obter_usuario_logado)):    
     try:
         with engine.begin() as conn:
-            sql = """DELETE FROM tutor WHERE id = :tutor_id"""
-            result = conn.execute(text(sql), {"tutor_id": tutor_id})
-
+            sql = """DELETE FROM tutor WHERE id = :tutor_id AND empresa_id = :empresa_id"""
+            result = conn.execute(text(sql), {"tutor_id": tutor_id, "empresa_id": usuario["empresa_id"]})
             if result.rowcount == 0:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Tutor não encontrado",
-                )
-
+                raise HTTPException(status_code=404, detail="Tutor não encontrado")
             return {"message": "Tutor deletado com sucesso!"}
-
-    # Re-lança o HTTPException para não ser capturado pelo erro 500 genérico
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao deletar tutor: {str(e)}",
-        )
-
-@router.get("/celular/{celular}")
-def get_tutor_por_celular(celular: str):
-    try:
-        with engine.connect() as conn:
-            # Busca pelo celular cadastrado
-            sql = """SELECT * FROM tutor WHERE celular = :celular"""
-            result = conn.execute(text(sql), {"celular": celular})
-            tutor = result.fetchone()
-
-            if tutor:
-                return dict(tutor._mapping)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Tutor não encontrado com este celular",
-                )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao buscar tutor por celular: {str(e)}", 
-
-        )      
+    except HTTPException: raise
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
