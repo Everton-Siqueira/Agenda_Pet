@@ -20,9 +20,11 @@ export default function LoginScreen() {
       // ATENÇÃO: Substitua pelo IP da sua máquina (ex: 192.168.x.x) para testar no celular físico ou emulador
       const response = await fetch('https://clavicle-groggily-devoutly.ngrok-free.app/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha }),
-      });
+        headers: { 'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true' // <-- ADICIONE ESTA LINHA EXATAMENTE AQUI
+      },
+      body: JSON.stringify({ email, senha }),
+    });
 
       const data = await response.json();
 
