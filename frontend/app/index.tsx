@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext'; // Ajustado conforme a sua árvore de pastas
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { loginAsStaff } = useAuth(); // Puxa o login do contexto de segurança do app
 
   const handleLogin = async () => {
     if (!email || !senha) {
@@ -17,27 +19,38 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // ATENÇÃO: Substitua pelo IP da sua máquina (ex: 192.168.x.x) para testar no celular físico ou emulador
-      const response = await fetch('http://SEU_IP_DA_MAQUINA_AQUI:8000/api/login', {
+      // IP do seu servidor Python unificado para computador e celular
+      const apiUrl = 'http://192.168.100.114:8000';
+
+      const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), // Limpa espaços extras que o celular põe
+          senha: senha 
+        }),
       });
 
       const data = await response.json();
 
       if (response.status === 200) {
-        // Salva os dados de segurança criptografados no celular
-        await SecureStore.setItemAsync('userToken', data.access_token);
-        await SecureStore.setItemAsync('userName', data.usuario.nome);
+        // 1. Salva o token de acesso bruto para requisições na API
+        await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
         
-        // Login com sucesso! Redireciona para a agenda protegida dentro de (main)
-        router.replace('/(main)/agenda');
+        // 2. Altera o estado de segurança global injetando o nome retornado pelo Python
+        await loginAsStaff(data.usuario.nome);
+        
+        // 3. Redireciona para o grupo de rotas interna (o _layout global vai capturar e abrir a agenda)
+        router.replace("/agenda");
       } else {
-        Alert.alert('Erro de Autenticação', data.detail || 'E-mail ou senha incorretos.');
+        const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
+        Alert.alert('Erro de Autenticação', mensagemErro);
       }
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor backend.');
+    } catch (error: any) {
+      Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nVerifique se o backend Python está ligado.\nDetalhe: ${error?.message}`);
     } finally {
       setLoading(false);
     }
