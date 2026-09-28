@@ -37,14 +37,16 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (response.status === 200) {
-        // 1. Guarda o token para requisições seguras da API
         await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
-        
-        // 2. Avisa o AuthContext global o nome do usuário validado pelo banco
         await loginAsStaff(data.usuario.nome);
         
-        // 3. Abre a tela da agenda diretamente usando o caminho da pasta
-        router.replace("/(main)/agenda" as any);
+        // FORÇA BRUTA: Se o router do Expo falhar, o JavaScript nativo força a troca de tela
+        if (Platform.OS === 'web') {
+          window.location.href = '/(main)/agenda';
+        } else {
+          router.replace("/(main)/agenda" as any);
+        }
+      
       } else {
         // Trata erro de e-mail/senha retornados pelo FastAPI
         const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
