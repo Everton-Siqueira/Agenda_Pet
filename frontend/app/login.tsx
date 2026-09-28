@@ -18,7 +18,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       // ATENÇÃO: Substitua pelo IP da sua máquina (ex: 192.168.x.x) para testar no celular físico ou emulador
-      const response = await fetch('http://SEU_IP_DA_MAQUINA_AQUI:8000/api/login', {
+      const response = await fetch('https://clavicle-groggily-devoutly.ngrok-free.app/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha }),
