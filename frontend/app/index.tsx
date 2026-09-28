@@ -44,7 +44,7 @@ export default function LoginScreen() {
         await loginAsStaff(data.usuario.nome);
         
         // 3. Redireciona para o grupo de rotas interna (o _layout global vai capturar e abrir a agenda)
-        router.replace("/agenda");
+        router.replace("/(main)/agenda" as any);
       } else {
         const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
         Alert.alert('Erro de Autenticação', mensagemErro);
