@@ -18,12 +18,22 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const debuggerHost = Constants.expoConfig?.hostUri;
-      const ipAddress = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
-      const apiUrl = `http://${ipAddress}:8000`;
+      let ipAddress = '192.168.100.114'; // Seu IP atual como garantia (fallback)
 
-      // Mensagem opcional de depuração para ver qual URL o celular gerou
-      console.log("Tentando conectar na URL:", `${apiUrl}/api/login`);
+      // Se estiver no celular, tenta pegar o IP do Metro Bundler dinamicamente
+      if (Platform.OS !== 'web') {
+        const debuggerHost = Constants.expoConfig?.hostUri || Constants.modules?.Manifest?.debuggerHost;
+        if (debuggerHost) {
+          ipAddress = debuggerHost.split(':')[0];
+        }
+      } else {
+        // Se estiver no PC (Web), usamos o localhost ou o IP fixo da máquina
+        ipAddress = window.location.hostname || '192.168.100.114';
+      }
+
+      // Monta a URL da API apontando para a porta do FastAPI
+      const apiUrl = `http://${ipAddress}:8000`;
+      console.log("Tentando conectar em:", `${apiUrl}/api/login`);
 
       const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
@@ -41,25 +51,16 @@ export default function LoginScreen() {
           await SecureStore.setItemAsync('userToken', data.access_token);
           await SecureStore.setItemAsync('userName', data.usuario.nome);
         }
+        
+        // Redireciona para a tela logada
         router.replace('/(main)/agenda');
       } else {
-        // Captura erros retornados intencionalmente pelo backend (ex: 401, 404, 500)
-        Alert.alert(
-          'Erro do Servidor (Status ' + response.status + ')',
-          typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail) || 'Erro desconhecido.'
-        );
+        Alert.alert('Erro de Autenticação', data.detail || 'E-mail ou senha incorretos.');
       }
     } catch (error: any) {
-      // CAPTURA DE ERRO CRUCIAL: Mostra o erro de rede ou falha de código em um alerta detalhado
-      const mensagemErro = error?.message || 'Sem mensagem de erro';
-      const nomeErro = error?.name || 'Erro Desconhecido';
-      
-      Alert.alert(
-        'Falha Técnica Detectada',
-        `Tipo: ${nomeErro}\nDetalhe: ${mensagemErro}\n\nVerifique se o seu FastAPI está rodando com "--host 0.0.0.0".`
-      );
-      
-      console.error("Erro completo capturado no catch:", error);
+      const msg = error?.message || 'Sem resposta do servidor';
+      Alert.alert('Falha de Conexão', `Não foi possível alcançar o backend.\nDetalhe: ${msg}`);
+      console.error("Erro no fetch do login:", error);
     } finally {
       setLoading(false);
     }
