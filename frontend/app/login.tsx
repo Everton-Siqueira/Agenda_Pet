@@ -58,7 +58,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>🐾 Agenda Pet SaaS</Text>
+      <Text style={styles.logo}>🐾 Agenda Pet SaaS Teste Login</Text>
       <Text style={styles.subTitle}>Área do Funcionário</Text>
 
       <TextInput
