@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../src/context/AuthContext'; // Ajustado conforme a sua árvore de pastas
+import { useAuth } from '../src/context/AuthContext'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
@@ -9,7 +9,7 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { loginAsStaff } = useAuth(); // Puxa o login do contexto de segurança do app
+  const { loginAsStaff } = useAuth(); // Importa a segurança do AuthContext
 
   const handleLogin = async () => {
     if (!email || !senha) {
@@ -19,7 +19,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // IP do seu servidor Python unificado para computador e celular
+      // IP unificado do seu backend Python
       const apiUrl = 'http://192.168.100.114:8000';
 
       const response = await fetch(`${apiUrl}/api/login`, {
@@ -29,7 +29,7 @@ export default function LoginScreen() {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          email: email.trim().toLowerCase(), // Limpa espaços extras que o celular põe
+          email: email.trim().toLowerCase(), // Remove espaços involuntários do teclado do celular
           senha: senha 
         }),
       });
@@ -37,20 +37,21 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (response.status === 200) {
-        // 1. Salva o token de acesso bruto para requisições na API
+        // 1. Guarda o token para requisições seguras da API
         await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
         
-        // 2. Altera o estado de segurança global injetando o nome retornado pelo Python
+        // 2. Avisa o AuthContext global o nome do usuário validado pelo banco
         await loginAsStaff(data.usuario.nome);
         
-        // 3. Redireciona para o grupo de rotas interna (o _layout global vai capturar e abrir a agenda)
+        // 3. Abre a tela da agenda diretamente usando o caminho da pasta
         router.replace("/(main)/agenda" as any);
       } else {
+        // Trata erro de e-mail/senha retornados pelo FastAPI
         const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
         Alert.alert('Erro de Autenticação', mensagemErro);
       }
     } catch (error: any) {
-      Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nVerifique se o backend Python está ligado.\nDetalhe: ${error?.message}`);
+      Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nDetalhe técnico: ${error?.message}`);
     } finally {
       setLoading(false);
     }
