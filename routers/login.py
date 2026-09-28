@@ -12,21 +12,29 @@ def login(dados_login: LoginSchema, db = Depends(get_db)):
     query = text("SELECT id, empresa_id, senha_hash, nome, cargo FROM funcionario WHERE email = :email AND ativo = TRUE;")
     result = db.execute(query, {"email": dados_login.email})
     funcionario = result.fetchone()
+
+    # 1º CORREÇÃO: Verifica se o funcionário existe ANTES de tentar mapear a senha_hash
+    if not funcionario:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="E-mail ou senha incorretos."
+        )
+
+    # Agora sim é seguro ler o mapeamento
     senha_hash = funcionario._mapping["senha_hash"]
 
-    # Se não encontrar ou a senha estiver errada, barra o acesso
-    # (.senha_hash e .nome funcionam mapeados pelo mapeamento de colunas do SQLAlchemy)
-    if not funcionario or not verificar_senha(dados_login.senha, senha_hash):
+    # 2º CORREÇÃO: Compara as senhas com segurança
+    if not verificar_senha(dados_login.senha, senha_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="E-mail ou senha incorretos."
         )
         
-    # Monta a carga (payload) do token JWT
+    # Monta a carga (payload) do token JWT usando o mapeamento correto do record
     dados_do_token = {
-        "sub": str(funcionario.id),
-        "empresa_id": str(funcionario.empresa_id),
-        "cargo": funcionario.cargo
+        "sub": str(funcionario._mapping["id"]),
+        "empresa_id": str(funcionario._mapping["empresa_id"]),
+        "cargo": funcionario._mapping["cargo"]
     }
     
     token = criar_token_acesso(dados_do_token)
@@ -35,7 +43,7 @@ def login(dados_login: LoginSchema, db = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer",
         "usuario": {
-            "nome": funcionario.nome,
-            "cargo": funcionario.cargo
+            "nome": funcionario._mapping["nome"],
+            "cargo": funcionario._mapping["cargo"]
         }
     }
