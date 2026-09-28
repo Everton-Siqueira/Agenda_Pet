@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -17,23 +18,33 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // ATENÇÃO: Substitua pelo IP da sua máquina (ex: 192.168.x.x) para testar no celular físico ou emulador
-      const response = await fetch('https://clavicle-groggily-devoutly.ngrok-free.dev./api/login', {
+      // Pega automaticamente o IP da máquina que está rodando o servidor do Expo
+      const debuggerHost = Constants.expoConfig?.hostUri;
+      const ipAddress = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
+
+      // Monta a URL dinâmica apontando para a porta 8000 do seu FastAPI
+      const apiUrl = `http://${ipAddress}:8000`;
+
+      const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true' // <-- ADICIONE ESTA LINHA EXATAMENTE AQUI
-      },
-      body: JSON.stringify({ email, senha }),
-    });
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha }),
+      });
 
       const data = await response.json();
 
       if (response.status === 200) {
-        // Salva os dados de segurança criptografados no celular
-        await SecureStore.setItemAsync('userToken', data.access_token);
-        await SecureStore.setItemAsync('userName', data.usuario.nome);
-        
-        // Login com sucesso! Redireciona para a agenda protegida dentro de (main)
+        if (Platform.OS === 'web') {
+          // Se for no navegador do PC, usa o localStorage padrão
+          localStorage.setItem('userToken', data.access_token);
+          localStorage.setItem('userName', data.usuario.nome);
+        } else {
+          // Se for no celular (iOS/Android), usa o SecureStore criptografado
+          await SecureStore.setItemAsync('userToken', data.access_token);
+          await SecureStore.setItemAsync('userName', data.usuario.nome);
+        }
+  
+        // Redireciona com sucesso
         router.replace('/(main)/agenda');
       } else {
         Alert.alert('Erro de Autenticação', data.detail || 'E-mail ou senha incorretos.');
