@@ -37,15 +37,23 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (response.status === 200) {
+        // 1. Salva a sessão no formato exato que o seu AuthContext.tsx lê no início do aplicativo
+        const dadosSessao = { kind: "staff", name: data.usuario.nome };
+        await AsyncStorage.setItem('@agenda-pet/session', JSON.stringify(dadosSessao));
+        
+        // 2. Salva o token de acesso para uso das outras telas
         await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
+        
+        // 3. Atualiza a memória de segurança global do aplicativo
         await loginAsStaff(data.usuario.nome);
         
-        // FORÇA BRUTA: Se o router do Expo falhar, o JavaScript nativo força a troca de tela
+        // 4. Recarrega a página de forma definitiva
         if (Platform.OS === 'web') {
           window.location.href = '/(main)/agenda';
         } else {
           router.replace("/(main)/agenda" as any);
         }
+      
       
       } else {
         // Trata erro de e-mail/senha retornados pelo FastAPI
