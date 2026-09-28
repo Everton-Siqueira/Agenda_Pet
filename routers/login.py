@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api/login", tags=["Autenticação"])
 @router.post("")
 def login(dados_login: LoginSchema, db = Depends(get_db)):
     # Busca o funcionário pelo e-mail
-    query = text("SELECT id, empresa_id, senha_hash, nome, cargo FROM funcionarios WHERE email = :email AND ativo = TRUE;")
+    query = text("SELECT id, empresa_id, senha_hash, nome, cargo FROM funcionario WHERE email = :email AND ativo = TRUE;")
     result = db.execute(query, {"email": dados_login.email})
     funcionario = result.fetchone()
     
