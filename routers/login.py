@@ -12,10 +12,11 @@ def login(dados_login: LoginSchema, db = Depends(get_db)):
     query = text("SELECT id, empresa_id, senha_hash, nome, cargo FROM funcionario WHERE email = :email AND ativo = TRUE;")
     result = db.execute(query, {"email": dados_login.email})
     funcionario = result.fetchone()
-    
+    senha_hash = funcionario._mapping["senha_hash"]
+
     # Se não encontrar ou a senha estiver errada, barra o acesso
     # (.senha_hash e .nome funcionam mapeados pelo mapeamento de colunas do SQLAlchemy)
-    if not funcionario or not verificar_senha(dados_login.senha, funcionario.senha_hash):
+    if not funcionario or not verificar_senha(dados_login.senha, senha_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="E-mail ou senha incorretos."
