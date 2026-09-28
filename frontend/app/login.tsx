@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext'; // 👈 IMPORTANTE: Caminho ajustado para o seu AuthContext
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { loginAsStaff } = useAuth(); // 👈 Puxa a função de login do Contexto global
 
   const handleLogin = async () => {
     if (!email || !senha) {
@@ -17,35 +19,38 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // IP Fixo do seu PC atualizado conforme o seu comando ipconfig
+      // IP do seu servidor Python local
       const apiUrl = 'http://192.168.100.114:8000';
 
       const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(),
+          senha: senha 
+        }),
       });
 
       const data = await response.json();
 
       if (response.status === 200) {
-        if (Platform.OS === 'web') {
-          localStorage.setItem('userToken', data.access_token);
-          localStorage.setItem('userName', data.usuario.nome);
-        } else {
-          await SecureStore.setItemAsync('userToken', data.access_token);
-          await SecureStore.setItemAsync('userName', data.usuario.nome);
-        }
+        // 1. Salva o Token bruto recebido do Python para as suas requisições futuras na API
+        await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
         
-        // Redireciona para a tela após o login bem-sucedido
-        router.navigate({ pathname: "/(main)/agenda" as any });
+        // 2. 🌟 O SEGREDO: Avisa o Contexto de segurança que o funcionário logou com sucesso
+        await loginAsStaff(data.usuario.nome);
+        
+        // 3. Redireciona de forma limpa para a agenda dentro da pasta (main)
+        router.replace("/agenda");
       } else {
-        // Exibe o erro exato que o seu FastAPI devolver (ex: e-mail incorreto, senha errada)
-        Alert.alert('Erro de Autenticação', data.detail || 'E-mail ou senha incorretos.');
+        const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
+        Alert.alert('Erro de Autenticação', mensagemErro);
       }
     } catch (error: any) {
-      // Exibe detalhadamente se houver falha de rede/conexão física
-      Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nDetalhe técnico: ${error?.message}`);
+      Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nDetalhe: ${error?.message}`);
     } finally {
       setLoading(false);
     }
