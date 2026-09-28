@@ -14,7 +14,7 @@ def cadastrar_empresa(dados: CadastroEmpresaSchema, db = Depends(get_db)):
         try:
             # 1. Criação da Empresa no banco
             query_empresa = text("""
-                INSERT INTO empresas (nome_comercial, razao_social, cnpj) 
+                INSERT INTO empresa (nome_comercial, razao_social, cnpj) 
                 VALUES (:nome, :razao, :cnpj) RETURNING id;
             """)
             result_empresa = db.execute(query_empresa, {
@@ -29,7 +29,7 @@ def cadastrar_empresa(dados: CadastroEmpresaSchema, db = Depends(get_db)):
             
             # 3. Criação do primeiro funcionário atrelado a essa empresa
             query_funcionario = text("""
-                INSERT INTO funcionarios (empresa_id, nome, email, senha_hash, cargo) 
+                INSERT INTO funcionario (empresa_id, nome, email, senha_hash, cargo) 
                 VALUES (:empresa_id, :nome, :email, :senha_hash, :cargo);
             """)
             db.execute(query_funcionario, {
