@@ -18,12 +18,12 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // Pega automaticamente o IP da máquina que está rodando o servidor do Expo
       const debuggerHost = Constants.expoConfig?.hostUri;
       const ipAddress = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
-
-      // Monta a URL dinâmica apontando para a porta 8000 do seu FastAPI
       const apiUrl = `http://${ipAddress}:8000`;
+
+      // Mensagem opcional de depuração para ver qual URL o celular gerou
+      console.log("Tentando conectar na URL:", `${apiUrl}/api/login`);
 
       const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
@@ -35,22 +35,31 @@ export default function LoginScreen() {
 
       if (response.status === 200) {
         if (Platform.OS === 'web') {
-          // Se for no navegador do PC, usa o localStorage padrão
           localStorage.setItem('userToken', data.access_token);
           localStorage.setItem('userName', data.usuario.nome);
         } else {
-          // Se for no celular (iOS/Android), usa o SecureStore criptografado
           await SecureStore.setItemAsync('userToken', data.access_token);
           await SecureStore.setItemAsync('userName', data.usuario.nome);
         }
-  
-        // Redireciona com sucesso
         router.replace('/(main)/agenda');
       } else {
-        Alert.alert('Erro de Autenticação', data.detail || 'E-mail ou senha incorretos.');
+        // Captura erros retornados intencionalmente pelo backend (ex: 401, 404, 500)
+        Alert.alert(
+          'Erro do Servidor (Status ' + response.status + ')',
+          typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail) || 'Erro desconhecido.'
+        );
       }
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor backend.');
+    } catch (error: any) {
+      // CAPTURA DE ERRO CRUCIAL: Mostra o erro de rede ou falha de código em um alerta detalhado
+      const mensagemErro = error?.message || 'Sem mensagem de erro';
+      const nomeErro = error?.name || 'Erro Desconhecido';
+      
+      Alert.alert(
+        'Falha Técnica Detectada',
+        `Tipo: ${nomeErro}\nDetalhe: ${mensagemErro}\n\nVerifique se o seu FastAPI está rodando com "--host 0.0.0.0".`
+      );
+      
+      console.error("Erro completo capturado no catch:", error);
     } finally {
       setLoading(false);
     }
