@@ -48,3 +48,4 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
             "nome": funcionario.nome,
             "cargo": funcionario.cargo
         }
+    }
