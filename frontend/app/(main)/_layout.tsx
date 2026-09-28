@@ -17,20 +17,25 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // CORREÇÃO: Define a URL correta se você estiver rodando no navegador (PC) ou no Celular físico/Emulador
-      const apiUrl = Platform.OS === 'web' 
-        ? 'http://localhost:8000' 
-        : 'http://192.168.100.114:8000';
+      // Endereço IP do seu servidor local para PC e Celular
+      const apiUrl = 'http://192.168.100.114:8000';
 
       const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), // Remove espaços que o teclado do celular põe sozinho
+          senha: senha 
+        }),
       });
 
       const data = await response.json();
 
       if (response.status === 200) {
+        // Grava as credenciais no navegador ou no armazenamento do celular
         if (Platform.OS === 'web') {
           localStorage.setItem('userToken', data.access_token);
           localStorage.setItem('userName', data.usuario.nome);
@@ -39,15 +44,22 @@ export default function LoginScreen() {
           await SecureStore.setItemAsync('userName', data.usuario.nome);
         }
         
-        // Redireciona para a tela após o login bem-sucedido
-        router.navigate({ pathname: "/(main)/agenda" as any });
+        // CORREÇÃO DA NAVEGAÇÃO: Tenta redirecionar usando o gerenciador de rotas do Expo
+        try {
+          router.replace("/(main)/agenda" as any);
+        } catch (navError) {
+          // Rota alternativa caso a pasta não use os parênteses na estrutura atual
+          try {
+            router.replace("/main/agenda" as any);
+          } catch (secondError) {
+            router.replace("/agenda" as any);
+          }
+        }
       } else {
-        // CORREÇÃO: Evita travamento caso o "detail" venha nulo ou em outro formato do backend
-        const mensagemErro = data && data.detail ? data.detail : 'E-mail ou senha incorretos.';
+        const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
         Alert.alert('Erro de Autenticação', mensagemErro);
       }
     } catch (error: any) {
-      // Exibe detalhadamente se houver falha de rede/conexão física
       Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nDetalhe técnico: ${error?.message}`);
     } finally {
       setLoading(false);
