@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActivityIndicator, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -18,22 +17,8 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      let ipAddress = '192.168.100.114'; // Seu IP atual como garantia (fallback)
-
-      // Se estiver no celular, tenta pegar o IP do Metro Bundler dinamicamente
-      if (Platform.OS !== 'web') {
-        const debuggerHost = Constants.expoConfig?.hostUri || Constants.modules?.Manifest?.debuggerHost;
-        if (debuggerHost) {
-          ipAddress = debuggerHost.split(':')[0];
-        }
-      } else {
-        // Se estiver no PC (Web), usamos o localhost ou o IP fixo da máquina
-        ipAddress = window.location.hostname || '192.168.100.114';
-      }
-
-      // Monta a URL da API apontando para a porta do FastAPI
-      const apiUrl = `http://${ipAddress}:8000`;
-      console.log("Tentando conectar em:", `${apiUrl}/api/login`);
+      // IP Fixo do seu PC atualizado conforme o seu comando ipconfig
+      const apiUrl = 'http://192.168.100.114:8000';
 
       const response = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
@@ -52,15 +37,15 @@ export default function LoginScreen() {
           await SecureStore.setItemAsync('userName', data.usuario.nome);
         }
         
-        // Redireciona para a tela logada
+        // Redireciona para a tela após o login bem-sucedido
         router.replace('/(main)/agenda');
       } else {
+        // Exibe o erro exato que o seu FastAPI devolver (ex: e-mail incorreto, senha errada)
         Alert.alert('Erro de Autenticação', data.detail || 'E-mail ou senha incorretos.');
       }
     } catch (error: any) {
-      const msg = error?.message || 'Sem resposta do servidor';
-      Alert.alert('Falha de Conexão', `Não foi possível alcançar o backend.\nDetalhe: ${msg}`);
-      console.error("Erro no fetch do login:", error);
+      // Exibe detalhadamente se houver falha de rede/conexão física
+      Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nDetalhe técnico: ${error?.message}`);
     } finally {
       setLoading(false);
     }
