@@ -15,12 +15,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # VEJA SE ESTÁ EXATAMENTE COM ESSE NOME ABAIXO:
 def gerar_senha_hash(senha_plana: str) -> str:
     """Transforma a senha em um texto criptografado e seguro para o banco."""
-    return pwd_context.hash(senha_plana)
+    # Garante que o texto seja convertido corretamente e limita o tamanho caso necessário
+    senha_limpa = senha_plana[:72] 
+    return pwd_context.hash(senha_limpa)
 
 def verificar_senha(senha_plana: str, senha_hash: str) -> bool:
     """Compara a senha que o usuário digitou com o hash salvo no banco."""
-    return pwd_context.verify(senha_plana, senha_hash)
-
+    senha_limpa = senha_plana[:72]
+    return pwd_context.verify(senha_limpa, senha_hash)
+    
 def criar_token_acesso(dados: dict) -> str:
     """Gera o Token JWT contendo as informações do funcionário e empresa."""
     dados_para_criptografar = dados.copy()
