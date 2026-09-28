@@ -38,7 +38,7 @@ export default function LoginScreen() {
         }
         
         // Redireciona para a tela após o login bem-sucedido
-        router.replace('/agenda');
+        router.replace('/');
       } else {
         // Exibe o erro exato que o seu FastAPI devolver (ex: e-mail incorreto, senha errada)
         Alert.alert('Erro de Autenticação', data.detail || 'E-mail ou senha incorretos.');
