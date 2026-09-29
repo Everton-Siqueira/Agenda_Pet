@@ -51,9 +51,11 @@ export default function LoginScreen() {
         console.log("2 - loginAsStaff terminou");
         router.replace("/agenda");
       } else {
-        const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
-        Alert.alert('Erro de Autenticação', mensagemErro);
-      }
+          Alert.alert(
+          'Erro de login',
+          'E-mail ou senha incorretos. Verifique seus dados e tente novamente.'
+      );
+    }
     } catch (error: any) {
       Alert.alert('Erro de Conexão', `Não foi possível alcançar o servidor.\nDetalhe: ${error?.message}`);
     } finally {
