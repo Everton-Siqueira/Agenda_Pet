@@ -148,7 +148,7 @@ export default function PetsScreen() {
               />
             ))}
           </View>
-          <Button title={editingId ? "Salvar" : "Pet Confirmar"} onPress={handleSave} loading={saving} />
+          <Button title={editingId ? "Salvar" : "Salvar Pet"} onPress={handleSave} loading={saving} />
         </Card>
       ) : (
         /* Barra de busca inteligente para localizar os pets rapidamente */
