@@ -49,7 +49,7 @@ export function Button({
         <ActivityIndicator color={variant === "primary" || variant === "danger" ? "#fff" : "#115e59"} />
       ) : (
         <Text className={`text-base font-semibold ${textVariants[variant]}`}>
-  Cadastrar
+  CADASTRAR
 </Text>
       )}
     </Pressable>
