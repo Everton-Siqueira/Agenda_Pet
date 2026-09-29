@@ -51,6 +51,7 @@ export default function LoginScreen() {
         console.log("2 - loginAsStaff terminou");
         router.replace("/agenda");
       } else {
+        console.log("ENTROU NO ELSE DO LOGIN");
           Alert.alert(
           'Erro de login',
           'E-mail ou senha incorretos. Verifique seus dados e tente novamente.'
