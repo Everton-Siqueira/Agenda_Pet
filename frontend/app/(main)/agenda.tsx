@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, Text, View, TextInput, ScrollView } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { atendimentoApi, petApi, servicoApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
@@ -19,6 +19,8 @@ const emptyForm = {
 };
 
 export default function AgendaScreen() {
+  const router = useRouter();
+  
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -30,6 +32,7 @@ export default function AgendaScreen() {
   const [form, setForm] = useState(emptyForm);
   const [busca, setBusca] = useState("");
   const [buscaPetForm, setBuscaPetForm] = useState("");
+  
 
   const petMap = useMemo(() => new Map((pets || []).map((pet) => [pet.id, pet])), [pets]);
   const servicoMap = useMemo(
