@@ -20,7 +20,7 @@ const emptyForm = {
 
 export default function AgendaScreen() {
   const router = useRouter();
-  
+
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -290,6 +290,46 @@ export default function AgendaScreen() {
       }
     >
       <ErrorBanner message={error} />
+
+      <View className="flex-row flex-wrap gap-2 mb-4">
+        <Pressable
+          onPress={() => router.replace("/agenda")}
+          className="bg-indigo-600 px-4 py-2 rounded-lg"
+        >
+          <Text className="text-white font-semibold">📅 Agenda</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/tutores")}
+          className="bg-slate-100 px-4 py-2 rounded-lg"
+        >
+          <Text className="text-slate-700 font-semibold">👤 Tutores</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/pets")}
+          className="bg-slate-100 px-4 py-2 rounded-lg"
+        >
+          <Text className="text-slate-700 font-semibold">🐶 Pets</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/servicos")}
+          className="bg-slate-100 px-4 py-2 rounded-lg"
+        >
+          <Text className="text-slate-700 font-semibold">✂️ Serviços</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/dashboard")}
+          className="bg-slate-100 px-4 py-2 rounded-lg"
+        >
+          <Text className="text-slate-700 font-semibold">📊 Dashboard</Text>
+        </Pressable>
+      </View>
+
+      <ErrorBanner message={error} />
+
 
       {formOpen ? (
         <ScrollView className="mb-4" showsVerticalScrollIndicator={false}>
