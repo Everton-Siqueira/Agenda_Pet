@@ -125,7 +125,7 @@ export default function TutoresScreen() {
             value={form.endereco}
             onChangeText={(endereco) => setForm((current) => ({ ...current, endereco }))}
           />
-          <Button title={editingId ? "Salvar" : "Cadas" + "trar"} onPress={handleSave} loading={saving} />
+          <Button title={editingId ? "Salvar" : "Confirmar"} onPress={handleSave} loading={saving} />
         </Card>
       ) : (
         /* Barra de pesquisa inteligente por nome/iniciais (só aparece se o formulário estiver fechado) */
