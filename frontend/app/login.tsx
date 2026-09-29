@@ -12,6 +12,11 @@ export default function LoginScreen() {
   const { loginAsStaff } = useAuth(); // 👈 Puxa a função de login do Contexto global
 
   const handleLogin = async () => {
+    const handleLogin = async () => {
+      console.log("LOGIN FOI CLICADO");
+
+      if (!email || !senha) {
+
     if (!email || !senha) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
