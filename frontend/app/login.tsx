@@ -40,10 +40,15 @@ export default function LoginScreen() {
         // 1. Salva o Token bruto recebido do Python para as suas requisições futuras na API
         await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
         
+        console.log("1 - Login respondeu:", data);
+
         // 2. 🌟 O SEGREDO: Avisa o Contexto de segurança que o funcionário logou com sucesso
         await loginAsStaff(data.usuario.nome);
+
+        console.log("2 - loginAsStaff terminou");
         
         // 3. Redireciona de forma limpa para a agenda dentro da pasta (main)
+        console.log("2 - loginAsStaff terminou");
         router.replace("/agenda");
       } else {
         const mensagemErro = data && data.detail ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : 'E-mail ou senha incorretos.';
