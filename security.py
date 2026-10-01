@@ -8,7 +8,7 @@ SECRET_KEY = "sua_chave_secreta_super_segura_aqui"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login", auto_error=True)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
