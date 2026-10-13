@@ -87,19 +87,35 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
 def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
     try:
         # 1. Verifica se a empresa já existe (procurando por nome ou CNPJ se houver)
+        # ATENÇÃO: Se a coluna no seu banco não for 'nome', mude abaixo (ex: nome_fantasia = :nome)
         if dados.cnpj:
-            query_busca = text("SELECT id FROM public.empresa WHERE cnpj = :cnpj OR nome = :nome LIMIT 1;")
-            result_busca = db.execute(query_busca, {"cnpj": dados.cnpj.strip(), "nome": dados.nome_empresa.strip()})
+            query_busca = text("""
+                SELECT id FROM public.empresa 
+                WHERE cnpj = :cnpj OR nome = :nome 
+                LIMIT 1;
+            """)
+            result_busca = db.execute(query_busca, {
+                "cnpj": dados.cnpj.strip(), 
+                "nome": dados.nome_empresa.strip()  # Corrigido para buscar o nome da EMPRESA
+            })
         else:
-            query_busca = text("SELECT id FROM public.empresa WHERE nome = :nome LIMIT 1;")
-            result_busca = db.execute(query_busca, {"nome": dados.nome_empresa.strip()})
+            query_busca = text("""
+                SELECT id FROM public.empresa 
+                WHERE nome = :nome 
+                LIMIT 1;
+            """)
+            result_busca = db.execute(query_busca, {
+                "nome": dados.nome_empresa.strip()  # Corrigido para buscar o nome da EMPRESA
+            })
             
         empresa_existente = result_busca.fetchone()
 
         if empresa_existente:
+            # Caso a empresa já exista, reutilizamos os dados do banco
             empresa_id = empresa_existente._mapping["id"]
         else:
             # Se não existir, insere a nova empresa na tabela
+            # ATENÇÃO: Se a coluna no banco não for 'nome', ajuste aqui também
             query_inserir_empresa = text("""
                 INSERT INTO public.empresa (nome, cnpj) 
                 VALUES (:nome, :cnpj) 
@@ -107,7 +123,10 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             """)
             result_nova_empresa = db.execute(
                 query_inserir_empresa, 
-                {"nome": dados.nome_empresa.strip(), "cnpj": dados.cnpj.strip() if dados.cnpj else None}
+                {
+                    "nome": dados.nome_empresa.strip(), 
+                    "cnpj": dados.cnpj.strip() if dados.cnpj else None
+                }
             )
             empresa_id = result_nova_empresa.fetchone()[0]
 
@@ -121,13 +140,14 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                 detail="Este e-mail de administrador já está cadastrado no sistema."
             )
 
-        # 3. Cria o hash seguro usando a função importada corretamente
+        # 3. Cria o hash seguro para a senha do administrador (usando a importação correta)
         senha_criptografada = gerar_senha_hash(dados.senha_admin)
 
         # 4. Insere o novo usuário vinculando ao empresa_id estabelecido
         query_inserir_usuario = text("""
             INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
-            VALUES (:empresa_id, :nome, :email, :senha_hash, 'Administrador', TRUE);
+            VALUES (:empresa_id, :nome, :email, :senha_hash, 'Administrador', TRUE)
+            RETURNING id;
         """)
         
         db.execute(query_inserir_usuario, {
@@ -137,11 +157,11 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             "senha_hash": senha_criptografada
         })
         
-        db.commit() # Confirma as alterações no banco de dados de vez
+        db.commit() # Confirma as alterações no banco de dados
 
         return {
             "status": "sucesso",
-            "message": "Empresa e Administrador cadastrados com sucesso!",
+            "message": "Empresa e Administrador vinculados com sucesso!",
             "empresa_id": str(empresa_id)
         }
 
