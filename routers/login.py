@@ -19,14 +19,12 @@ router = APIRouter(prefix="/api/login", tags=["Autenticação"])
 
 @router.post("")
 def login(dados: LoginDados, db = Depends(get_db)):
-    # 1. Busca funcionário ativo
     query = text("SELECT id, empresa_id, senha_hash, nome, cargo FROM public.funcionario WHERE email = :email AND ativo = TRUE;")
     user = db.execute(query, {"email": dados.email.strip()}).fetchone()
 
     if not user or not verificar_senha(dados.senha, user._mapping["senha_hash"]):
         raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
         
-    # 2. Gera o Token de Acesso
     token = criar_token_acesso({
         "sub": str(user._mapping["id"]),
         "empresa_id": str(user._mapping["empresa_id"]),
@@ -41,30 +39,32 @@ def login(dados: LoginDados, db = Depends(get_db)):
 
 @router.post("/registrar-empresa")
 def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
-    # 1. Evita duplicidade de e-mail de funcionário
+    # 1. Verifica duplicidade de e-mail antes de abrir a transação
     email_existe = db.execute(text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;"), {"email": dados.email_admin.strip()}).fetchone()
     if email_existe:
         raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
 
-    # 2. Busca ou Insere a Empresa (Modo automático do Postgres)
-    empresa = db.execute(text("SELECT id FROM public.empresa WHERE cnpj = :cnpj OR nome_comercial = :nome LIMIT 1;"), {"cnpj": dados.cnpj, "nome": dados.nome_empresa}).fetchone()
-    
-    if empresa:
-        empresa_id = empresa[0]
-    else:
-        query_empresa = text("INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) VALUES (:nome, :nome, :cnpj, NOW(), TRUE) RETURNING id;")
-        empresa_id = db.execute(query_empresa, {"nome": dados.nome_empresa.strip(), "cnpj": dados.cnpj}).fetchone()[0]
+    # O 'with db.begin()' gerencia o commit e garante que grave no PostgreSQL perfeitamente
+    with db.begin():
+        # 2. Busca ou Insere a Empresa
+        empresa = db.execute(text("SELECT id FROM public.empresa WHERE cnpj = :cnpj OR nome_comercial = :nome LIMIT 1;"), {"cnpj": dados.cnpj, "nome": dados.nome_empresa}).fetchone()
+        
+        if empresa:
+            empresa_id = empresa[0]
+        else:
+            query_empresa = text("INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) VALUES (:nome, :nome, :cnpj, NOW(), TRUE) RETURNING id;")
+            empresa_id = db.execute(query_empresa, {"nome": dados.nome_empresa.strip(), "cnpj": dados.cnpj}).fetchone()[0]
 
-    # 3. Insere o Administrador
-    query_user = text("""
-        INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
-        VALUES (:empresa_id, :nome, :email, :senha, 'Administrador', TRUE);
-    """)
-    db.execute(query_user, {
-        "empresa_id": empresa_id,
-        "nome": dados.nome_admin.strip(),
-        "email": dados.email_admin.strip(),
-        "senha": gerar_senha_hash(dados.senha_admin)
-    })
+        # 3. Insere o Administrador extraindo o ID numérico correto
+        query_user = text("""
+            INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
+            VALUES (:empresa_id, :nome, :email, :senha, 'Administrador', TRUE);
+        """)
+        db.execute(query_user, {
+            "empresa_id": int(empresa_id),
+            "nome": dados.nome_admin.strip(),
+            "email": dados.email_admin.strip(),
+            "senha": gerar_senha_hash(dados.senha_admin)
+        })
 
     return {"status": "sucesso", "message": "Cadastro realizado com sucesso!"}
