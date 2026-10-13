@@ -44,24 +44,27 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
     if email_existe:
         raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
 
-    # O 'with db.begin()' gerencia o commit e garante que grave no PostgreSQL perfeitamente
+    # O 'with db.begin()' gerencia o commit de forma limpa
     with db.begin():
         # 2. Busca ou Insere a Empresa
         empresa = db.execute(text("SELECT id FROM public.empresa WHERE cnpj = :cnpj OR nome_comercial = :nome LIMIT 1;"), {"cnpj": dados.cnpj, "nome": dados.nome_empresa}).fetchone()
         
         if empresa:
-            empresa_id = empresa[0]
+            # Extração segura usando o dicionário da linha do banco de dados
+            empresa_id = empresa._mapping["id"]
         else:
             query_empresa = text("INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) VALUES (:nome, :nome, :cnpj, NOW(), TRUE) RETURNING id;")
-            empresa_id = db.execute(query_empresa, {"nome": dados.nome_empresa.strip(), "cnpj": dados.cnpj}).fetchone()[0]
+            nova_empresa = db.execute(query_empresa, {"nome": dados.nome_empresa.strip(), "cnpj": dados.cnpj}).fetchone()
+            # Extração segura usando o dicionário da linha do banco de dados
+            empresa_id = nova_empresa._mapping["id"]
 
-        # 3. Insere o Administrador extraindo o ID numérico correto
+        # 3. Insere o Administrador vinculando ao ID correto
         query_user = text("""
             INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
             VALUES (:empresa_id, :nome, :email, :senha, 'Administrador', TRUE);
         """)
         db.execute(query_user, {
-            "empresa_id": int(empresa_id),
+            "empresa_id": empresa_id,
             "nome": dados.nome_admin.strip(),
             "email": dados.email_admin.strip(),
             "senha": gerar_senha_hash(dados.senha_admin)
