@@ -33,7 +33,9 @@ export default function LoginScreen() {
   const apiUrl = 'http://192.168.100.114:8000';
 
   const handleLogin = async () => {
-    if (!email.trim() || !senha) {
+    const emailLimpo = email.trim().toLowerCase();
+
+    if (!emailLimpo || !senha) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
@@ -48,7 +50,7 @@ export default function LoginScreen() {
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
+          email: emailLimpo,
           senha: senha,
         }),
       });
@@ -58,11 +60,21 @@ export default function LoginScreen() {
       if (response.status === 200) {
         await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
         
-        // Atualiza o estado global de autenticação ANTES da troca de rota
-        await loginAsStaff(data.usuario.nome);
+        try {
+          await loginAsStaff(data.usuario.nome);
+        } catch (authError) {
+          console.log("Aviso no Contexto de Autenticação:", authError);
+        }
         
-        // Direciona para o grupo de rotas protegidas
-        router.replace('/(main)');
+        try {
+          router.replace('/agenda');
+        } catch (e) {
+          try {
+            router.replace('/(main)/agenda');
+          } catch (err2) {
+            router.push('/agenda');
+          }
+        }
         return;
       }
 
@@ -107,27 +119,24 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (response.status === 200 || response.status === 201) {
-        // Captura o e-mail digitado antes de limpar os campos
-        const emailCriado = emailAdmin.trim().toLowerCase();
-
-        // 1. FECHA O MODAL IMEDIATAMENTE (Mata a rodinha de carregamento e esconde a tela de cadastro)
+        // 1. Fecha o modal de cadastro imediatamente
         setModalVisible(false);
         setCadastroLoading(false);
 
-        // 2. Preenche os dados automaticamente na tela de login de fundo
-        setEmail(emailCriado); 
+        // 2. CORREÇÃO: Reseta as duas caixas de texto da tela de login para ficarem vazias e limpas
+        setEmail(''); 
         setSenha('');
         
-        // 3. Limpa completamente os campos do formulário para o próximo uso
+        // 3. Limpa completamente os campos internos do formulário de cadastro
         setNomeEmpresa('');
         setCnpj('');
         setNomeAdmin('');
         setEmailAdmin('');
         setSenhaAdmin('');
 
-        // 4. Emite um aviso simples fora do escopo do Modal para não congelar o app
+        // 4. Dispara o alerta de sucesso com a instrução correta para o usuário
         setTimeout(() => {
-          Alert.alert('Sucesso 🎉', 'Sua empresa foi cadastrada! Insira sua senha para entrar.');
+          Alert.alert('Sucesso 🎉', 'Sua empresa foi cadastrada com sucesso! Faça login com a sua conta para acessar o sistema.');
         }, 300);
         
         return;
