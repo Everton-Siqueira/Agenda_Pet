@@ -32,8 +32,8 @@ export default function LoginScreen() {
   const { loginAsStaff } = useAuth();
   
   // IP da sua máquina local configurado no backend
-  const apiUrl = https://clavicle-groggily-devoutly.ngrok-free.dev
-
+  const apiUrl = 'https://clavicle-groggily-devoutly.ngrok-free.dev';
+  
   const handleLogin = async () => {
     if (!email.trim() || !senha) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.');
