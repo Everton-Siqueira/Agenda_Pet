@@ -100,6 +100,22 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                 "nome_empresa": dados.nome_empresa.strip()
             })
         else:
+            query_busca = text("""
+                SELECT id FROM public.empresa 
+                WHERE nome_comercial = :nome_empresa 
+                   OR razao_social = :nome_empresa 
+                LIMIT 1;
+            """)
+            result_busca = db.execute(query_busca, {
+                "nome_empresa": dados.nome_empresa.strip()
+            })
+            
+        empresa_existente = result_busca.fetchone()
+
+        if empresa_existente:
+            # Caso a empresa já exista, reutilizamos o id puro do mapeamento do banco
+            empresa_id = empresa_existente._mapping["id"]
+        else:
             # Se não existir, insere a nova empresa mapeando as colunas identificadas
             query_inserir_empresa = text("""
                 INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) 
@@ -114,10 +130,14 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                     "cnpj": dados.cnpj.strip() if dados.cnpj else None
                 }
             )
-            
-            # CORREÇÃO CRÍTICA: Extrai a primeira posição [0] para obter a string pura do UUID
+            # EXTRAÇÃO SEGURA: Acessa o dicionário de mapeamento da linha retornada
             linha_empresa = result_nova_empresa.fetchone()
-            empresa_id = linha_empresa[0] if linha_empresa else None
+            if not linha_empresa:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Falha ao gerar o identificador da empresa no banco de dados."
+                )
+            empresa_id = linha_empresa._mapping["id"]
 
         # 2. Verifica se o e-mail do administrador já está cadastrado na tabela funcionario
         query_busca_user = text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;")
@@ -145,9 +165,9 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             "senha_hash": senha_criptografada
         })
         
-        db.commit() # Confirma a gravação de vez
+        db.commit() # Confirma a gravação de vez de todas as tabelas
 
-        # RETORNO LIMPADO: Garante que o ID vá como string pura para o celular/Expo
+        # RETORNO LIMPADO: Força o ID a virar String para que o JSON do FastAPI envie com sucesso
         return {
             "status": "sucesso",
             "message": "Empresa e Administrador cadastrados com sucesso!",
