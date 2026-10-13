@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
 from database import engine
 from security import obter_usuario_logado
@@ -92,16 +92,23 @@ def get_atendimentos(
 
 
 @router.put("/{atendimento_id}")
-def update_status_atendimento(
+def update_atendimento(
     atendimento_id: int,
     dados: dict,
     usuario: dict = Depends(obter_usuario_logado)
 ):
     try:
         with engine.begin() as conn:
+            # CORREÇÃO: Permite atualizar todos os campos do agendamento enviados pelo formulário
             sql = """
                 UPDATE atendimento
-                SET status = :status
+                SET 
+                    id_pet = :id_pet,
+                    id_servico = :id_servico,
+                    data_atendimento = :data_atendimento,
+                    horario_atendimento = :horario_atendimento,
+                    valor = :valor,
+                    status = :status
                 WHERE id = :atendimento_id
                 AND empresa_id = :empresa_id
             """
@@ -109,6 +116,11 @@ def update_status_atendimento(
             result = conn.execute(
                 text(sql),
                 {
+                    "id_pet": dados.get("id_pet"),
+                    "id_servico": dados.get("id_servico"),
+                    "data_atendimento": dados.get("data_atendimento"),
+                    "horario_atendimento": dados.get("horario_atendimento"),
+                    "valor": dados.get("valor"),
                     "status": dados.get("status"),
                     "atendimento_id": atendimento_id,
                     "empresa_id": usuario["empresa_id"]
@@ -118,11 +130,11 @@ def update_status_atendimento(
             if result.rowcount == 0:
                 raise HTTPException(
                     status_code=404,
-                    detail="Agendamento não encontrado"
+                    detail="Agendamento não encontrado ou sem permissão para alterar."
                 )
 
             return {
-                "message": "Status do agendamento atualizado!"
+                "message": "Agendamento atualizado com sucesso!"
             }
 
     except HTTPException:
