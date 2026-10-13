@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
-from security import verificar_senha, criar_token_acesso, gerar_senha_hash  # Adicionado obter_senha_hash se precisar criar senha para o admin
+from security import verificar_senha, criar_token_acesso, gerar_senha_hash # Import correto
 from database import get_db
 from pydantic import BaseModel, EmailStr
 import traceback
@@ -39,20 +39,13 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
                 detail="E-mail não encontrado no banco de dados."
             )
 
-        # 2. Extração segura dos dados retornados pelo banco
-        try:
-            dados_banco = funcionario._mapping
-            id_usuario = dados_banco["id"]
-            empresa_id = dados_banco["empresa_id"]
-            senha_hash = dados_banco["senha_hash"]
-            nome_usuario = dados_banco["nome"]
-            cargo_usuario = dados_banco["cargo"]
-        except Exception:
-            id_usuario = funcionario[0]
-            empresa_id = funcionario[1]
-            senha_hash = funcionario[2]
-            nome_usuario = funcionario[3]
-            cargo_usuario = funcionario[4]
+        # 2. Extração segura usando o padrão de mapeamento do SQLAlchemy
+        dados_banco = funcionario._mapping
+        id_usuario = dados_banco["id"]
+        empresa_id = dados_banco["empresa_id"]
+        senha_hash = dados_banco["senha_hash"]
+        nome_usuario = dados_banco["nome"]
+        cargo_usuario = dados_banco["cargo"]
 
         # 3. Validação da Senha
         if not verificar_senha(dados_login.senha, senha_hash):
@@ -61,7 +54,7 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
                 detail="Senha incorreta para este usuário."
             )
             
-        # 4. Montagem do Token convertendo obrigatoriamente UUIDs em strings puras
+        # 4. Montagem do Token convertendo UUIDs em strings puras
         dados_do_token = {
             "sub": str(id_usuario),
             "empresa_id": str(empresa_id),
@@ -86,29 +79,25 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
         print(erro_detalhado)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"O Python quebrou no banco de dados! Detalhe técnico: {str(e)}"
+            detail=f"Erro interno no servidor ao autenticar."
         )
 
-# NOVA ROTA: Cadastro de nova empresa com aproveitamento de dados existentes
+# ROTA: Cadastro de nova empresa com aproveitamento de dados existentes
 @router.post("/registrar-empresa")
 def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
     try:
         # 1. Verifica se a empresa já existe (procurando por nome ou CNPJ se houver)
         if dados.cnpj:
-            query_busca = text("SELECT id, nome FROM public.empresa WHERE cnpj = :cnpj OR nome = :nome LIMIT 1;")
+            query_busca = text("SELECT id FROM public.empresa WHERE cnpj = :cnpj OR nome = :nome LIMIT 1;")
             result_busca = db.execute(query_busca, {"cnpj": dados.cnpj.strip(), "nome": dados.nome_empresa.strip()})
         else:
-            query_busca = text("SELECT id, nome FROM public.empresa WHERE nome = :nome LIMIT 1;")
+            query_busca = text("SELECT id FROM public.empresa WHERE nome = :nome LIMIT 1;")
             result_busca = db.execute(query_busca, {"nome": dados.nome_empresa.strip()})
             
         empresa_existente = result_busca.fetchone()
 
         if empresa_existente:
-            # Caso a empresa já exista, reutilizamos os dados do banco
-            try:
-                empresa_id = empresa_existente._mapping["id"]
-            except Exception:
-                empresa_id = empresa_existente[0]
+            empresa_id = empresa_existente._mapping["id"]
         else:
             # Se não existir, insere a nova empresa na tabela
             query_inserir_empresa = text("""
@@ -122,7 +111,7 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             )
             empresa_id = result_nova_empresa.fetchone()[0]
 
-        # 2. Verifica se o e-mail do administrador já está cadastrado para evitar duplicidade de usuário
+        # 2. Verifica se o e-mail do administrador já está cadastrado
         query_busca_user = text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;")
         user_existente = db.execute(query_busca_user, {"email": dados.email_admin.strip()}).fetchone()
         
@@ -132,28 +121,27 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                 detail="Este e-mail de administrador já está cadastrado no sistema."
             )
 
-        # 3. Cria o hash seguro para a senha do administrador
-        senha_criptografada = obter_senha_hash(dados.senha_admin)
+        # 3. Cria o hash seguro usando a função importada corretamente
+        senha_criptografada = gerar_senha_hash(dados.senha_admin)
 
         # 4. Insere o novo usuário vinculando ao empresa_id estabelecido
         query_inserir_usuario = text("""
             INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
-            VALUES (:empresa_id, :nome, :email, :senha_hash, 'Administrador', TRUE)
-            RETURNING id;
+            VALUES (:empresa_id, :nome, :email, :senha_hash, 'Administrador', TRUE);
         """)
         
-        result_usuario = db.execute(query_inserir_usuario, {
+        db.execute(query_inserir_usuario, {
             "empresa_id": empresa_id,
             "nome": dados.nome_admin.strip(),
             "email": dados.email_admin.strip(),
             "senha_hash": senha_criptografada
         })
         
-        db.commit() # Confirma as alterações no banco de dados
+        db.commit() # Confirma as alterações no banco de dados de vez
 
         return {
             "status": "sucesso",
-            "message": "Empresa e Administrador vinculados com sucesso!",
+            "message": "Empresa e Administrador cadastrados com sucesso!",
             "empresa_id": str(empresa_id)
         }
 
