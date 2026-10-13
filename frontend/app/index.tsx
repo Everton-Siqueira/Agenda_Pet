@@ -106,30 +106,38 @@ export default function LoginScreen() {
 
       const data = await response.json();
 
-      if (response.status === 200) {
-        Alert.alert('Sucesso', 'Empresa e Administrador vinculados com sucesso!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              setModalVisible(false);
-              setEmail(emailAdmin.trim().toLowerCase());
-              setSenha('');
-              setNomeEmpresa('');
-              setCnpj('');
-              setNomeAdmin('');
-              setEmailAdmin('');
-              setSenhaAdmin('');
-            },
-          },
-        ]);
+      if (response.status === 200 || response.status === 201) {
+        // Captura o e-mail digitado antes de limpar os campos
+        const emailCriado = emailAdmin.trim().toLowerCase();
+
+        // 1. FECHA O MODAL IMEDIATAMENTE (Mata a rodinha de carregamento e esconde a tela de cadastro)
+        setModalVisible(false);
+        setCadastroLoading(false);
+
+        // 2. Preenche os dados automaticamente na tela de login de fundo
+        setEmail(emailCriado); 
+        setSenha('');
+        
+        // 3. Limpa completamente os campos do formulário para o próximo uso
+        setNomeEmpresa('');
+        setCnpj('');
+        setNomeAdmin('');
+        setEmailAdmin('');
+        setSenhaAdmin('');
+
+        // 4. Emite um aviso simples fora do escopo do Modal para não congelar o app
+        setTimeout(() => {
+          Alert.alert('Sucesso 🎉', 'Sua empresa foi cadastrada! Insira sua senha para entrar.');
+        }, 300);
+        
         return;
       }
 
+      setCadastroLoading(false);
       Alert.alert('Erro no cadastro', data?.detail || 'Falha ao registrar empresa.');
     } catch (error: any) {
-      Alert.alert('Erro de Conexão', 'Não foi possível se conectar ao servidor backend.');
-    } finally {
       setCadastroLoading(false);
+      Alert.alert('Erro de Conexão', 'Não foi possível se conectar ao servidor backend.');
     }
   };
 
