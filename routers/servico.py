@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
 from database import engine
 from security import obter_usuario_logado
@@ -17,8 +18,14 @@ def create_servico(servico: dict, usuario: dict = Depends(obter_usuario_logado))
                 "empresa_id": usuario["empresa_id"]
             }
             result = conn.execute(text(sql), dados)
-            return {"message": "Serviço criado com sucesso!", "id": result.fetchone()}
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+            
+            # CORREÇÃO AQUI: Extrai o primeiro elemento da tupla retornada pelo fetchone()
+            linha_id = result.fetchone()
+            novo_id = linha_id[0] if linha_id else None
+            
+            return {"message": "Serviço criado com sucesso!", "id": novo_id}
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("")
 def get_servicos(usuario: dict = Depends(obter_usuario_logado)):
@@ -27,7 +34,8 @@ def get_servicos(usuario: dict = Depends(obter_usuario_logado)):
             sql = """SELECT * FROM servico WHERE empresa_id = :empresa_id"""
             result = conn.execute(text(sql), {"empresa_id": usuario["empresa_id"]})
             return [dict(row._mapping) for row in result]
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{servico_id}")
 def update_servico(servico_id: int, servico: dict, usuario: dict = Depends(obter_usuario_logado)):  
@@ -42,10 +50,13 @@ def update_servico(servico_id: int, servico: dict, usuario: dict = Depends(obter
                 "empresa_id": usuario["empresa_id"]
             }
             result = conn.execute(text(sql), dados)
-            if result.rowcount == 0: raise HTTPException(status_code=404, detail="Serviço não encontrado")
+            if result.rowcount == 0: 
+                raise HTTPException(status_code=404, detail="Serviço não encontrado")
             return {"message": "Serviço atualizado com sucesso!"}
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException: 
+        raise
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{servico_id}")
 def delete_servico(servico_id: int, usuario: dict = Depends(obter_usuario_logado)):    
@@ -53,7 +64,10 @@ def delete_servico(servico_id: int, usuario: dict = Depends(obter_usuario_logado
         with engine.begin() as conn:
             sql = """DELETE FROM servico WHERE id = :servico_id AND empresa_id = :empresa_id"""
             result = conn.execute(text(sql), {"servico_id": servico_id, "empresa_id": usuario["empresa_id"]})
-            if result.rowcount == 0: raise HTTPException(status_code=404, detail="Serviço não encontrado")
+            if result.rowcount == 0: 
+                raise HTTPException(status_code=404, detail="Serviço não encontrado")
             return {"message": "Serviço deletado com sucesso!"}
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException: 
+        raise
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail=str(e))
