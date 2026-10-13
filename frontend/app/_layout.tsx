@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Stack, useRouter } from 'expo-router';
-import { useAuth } from '../../src/context/AuthContext';
+import { useAuth } from '../src/context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function MainLayout() {
