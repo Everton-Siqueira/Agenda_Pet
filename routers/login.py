@@ -39,26 +39,38 @@ def login(dados: LoginDados, db = Depends(get_db)):
 
 @router.post("/registrar-empresa")
 def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
-    # 1. Verifica duplicidade de e-mail antes de abrir a transação
-    email_existe = db.execute(text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;"), {"email": dados.email_admin.strip()}).fetchone()
-    if email_existe:
-        raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
-
-    # O 'with db.begin()' gerencia o commit de forma limpa
+    # Tudo deve rodar sob o controle de um único contexto de transação explícita
     with db.begin():
+        # 1. Verifica duplicidade de e-mail dentro da mesma transação segura
+        query_email = text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;")
+        email_existe = db.execute(query_email, {"email": dados.email_admin.strip()}).fetchone()
+        
+        if email_existe:
+            raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
+
         # 2. Busca ou Insere a Empresa
-        empresa = db.execute(text("SELECT id FROM public.empresa WHERE cnpj = :cnpj OR nome_comercial = :nome LIMIT 1;"), {"cnpj": dados.cnpj, "nome": dados.nome_empresa}).fetchone()
+        query_busca_empresa = text("""
+            SELECT id FROM public.empresa 
+            WHERE cnpj = :cnpj OR nome_comercial = :nome 
+            LIMIT 1;
+        """)
+        empresa = db.execute(query_busca_empresa, {"cnpj": dados.cnpj, "nome": dados.nome_empresa}).fetchone()
         
         if empresa:
-            # Extração segura usando o dicionário da linha do banco de dados
             empresa_id = empresa._mapping["id"]
         else:
-            query_empresa = text("INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) VALUES (:nome, :nome, :cnpj, NOW(), TRUE) RETURNING id;")
-            nova_empresa = db.execute(query_empresa, {"nome": dados.nome_empresa.strip(), "cnpj": dados.cnpj}).fetchone()
-            # Extração segura usando o dicionário da linha do banco de dados
+            query_empresa = text("""
+                INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) 
+                VALUES (:nome, :nome, :cnpj, NOW(), TRUE) 
+                RETURNING id;
+            """)
+            nova_empresa = db.execute(query_empresa, {
+                "nome": dados.nome_empresa.strip(), 
+                "cnpj": dados.cnpj
+            }).fetchone()
             empresa_id = nova_empresa._mapping["id"]
 
-        # 3. Insere o Administrador vinculando ao ID correto
+        # 3. Insere o Administrador
         query_user = text("""
             INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
             VALUES (:empresa_id, :nome, :email, :senha, 'Administrador', TRUE);
@@ -70,4 +82,8 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             "senha": gerar_senha_hash(dados.senha_admin)
         })
 
-    return {"status": "sucesso", "message": "Cadastro realizado com sucesso!"}
+    # O commit ocorre de forma implícita e automática ao sair com sucesso do bloco 'with'
+    return {
+        "status": "sucesso", 
+        "message": "Cadastro realizado com sucesso!"
+    }
