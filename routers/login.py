@@ -100,22 +100,6 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                 "nome_empresa": dados.nome_empresa.strip()
             })
         else:
-            query_busca = text("""
-                SELECT id FROM public.empresa 
-                WHERE nome_comercial = :nome_empresa 
-                   OR razao_social = :nome_empresa 
-                LIMIT 1;
-            """)
-            result_busca = db.execute(query_busca, {
-                "nome_empresa": dados.nome_empresa.strip()
-            })
-            
-        empresa_existente = result_busca.fetchone()
-
-        if empresa_existente:
-            # Caso a empresa já exista, reutilizamos o id puro do banco de dados
-            empresa_id = empresa_existente._mapping["id"]
-        else:
             # Se não existir, insere a nova empresa mapeando as colunas identificadas
             query_inserir_empresa = text("""
                 INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) 
@@ -130,7 +114,8 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                     "cnpj": dados.cnpj.strip() if dados.cnpj else None
                 }
             )
-            # Extração correta da primeira posição para obter a string pura do UUID
+            
+            # CORREÇÃO CRÍTICA: Extrai a primeira posição [0] para obter a string pura do UUID
             linha_empresa = result_nova_empresa.fetchone()
             empresa_id = linha_empresa[0] if linha_empresa else None
 
@@ -162,6 +147,7 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
         
         db.commit() # Confirma a gravação de vez
 
+        # RETORNO LIMPADO: Garante que o ID vá como string pura para o celular/Expo
         return {
             "status": "sucesso",
             "message": "Empresa e Administrador cadastrados com sucesso!",
