@@ -1,191 +1,70 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
-# Importa as funções exatamente como estão escritas no seu security.py
-from security import verificar_senha, criar_token_acesso, gerar_senha_hash 
+from security import verificar_senha, criar_token_acesso, gerar_senha_hash
 from database import get_db
 from pydantic import BaseModel
-import traceback
 
-# Modelo para receber as requisições de Login
 class LoginDados(BaseModel):
     email: str
     senha: str
 
-# Modelo para receber as requisições de Cadastro de Nova Empresa (Campos limpos)
 class CadastroEmpresaDados(BaseModel):
     nome_empresa: str
     cnpj: str | None = None
     nome_admin: str
-    email_admin: str  # Removido EmailStr para evitar problemas de dependência
+    email_admin: str
     senha_admin: str
 
 router = APIRouter(prefix="/api/login", tags=["Autenticação"])
 
 @router.post("")
-def login(dados_login: LoginDados, db = Depends(get_db)):
-    try:
-        # 1. Busca o funcionário pelo e-mail
-        query = text("""
-            SELECT id, empresa_id, senha_hash, nome, cargo 
-            FROM public.funcionario 
-            WHERE email = :email AND ativo = TRUE;
-        """)
-        result = db.execute(query, {"email": dados_login.email.strip()})
-        funcionario = result.fetchone()
+def login(dados: LoginDados, db = Depends(get_db)):
+    # 1. Busca funcionário ativo
+    query = text("SELECT id, empresa_id, senha_hash, nome, cargo FROM public.funcionario WHERE email = :email AND ativo = TRUE;")
+    user = db.execute(query, {"email": dados.email.strip()}).fetchone()
 
-        # Validação se o usuário existe
-        if not funcionario:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="E-mail não encontrado no banco de dados."
-            )
-
-        # 2. Extração segura usando o padrão de mapeamento do SQLAlchemy
-        dados_banco = funcionario._mapping
-        id_usuario = dados_banco["id"]
-        empresa_id = dados_banco["empresa_id"]
-        senha_hash = dados_banco["senha_hash"]
-        nome_usuario = dados_banco["nome"]
-        cargo_usuario = dados_banco["cargo"]
-
-        # 3. Validação da Senha usando o security.py
-        if not verificar_senha(dados_login.senha, senha_hash):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Senha incorreta para este usuário."
-            )
-            
-        # 4. Montagem do Token convertendo UUIDs em strings puras
-        dados_do_token = {
-            "sub": str(id_usuario),
-            "empresa_id": str(empresa_id),
-            "cargo": str(cargo_usuario)
-        }
+    if not user or not verificar_senha(dados.senha, user._mapping["senha_hash"]):
+        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
         
-        token = criar_token_acesso(dados_do_token)
-        
-        return {
-            "access_token": token,
-            "token_type": "bearer",
-            "usuario": {
-                "nome": str(nome_usuario),
-                "cargo": str(cargo_usuario)
-            }
-        }
+    # 2. Gera o Token de Acesso
+    token = criar_token_acesso({
+        "sub": str(user._mapping["id"]),
+        "empresa_id": str(user._mapping["empresa_id"]),
+        "cargo": str(user._mapping["cargo"])
+    })
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "usuario": {"nome": user._mapping["nome"], "cargo": user._mapping["cargo"]}
+    }
 
-    except HTTPException as http_err:
-        raise http_err
-    except Exception as e:
-        erro_detalhado = f"Erro Interno no Python ao autenticar: {str(e)} -> {traceback.format_exc()}"
-        print(erro_detalhado)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno no servidor ao autenticar."
-        )
-
-# ROTA: Cadastro de nova empresa com aproveitamento de dados existentes
 @router.post("/registrar-empresa")
 def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
-    # Iniciamos uma transação explícita na conexão crua para garantir controle total
-    transacao = db.begin()
-    try:
-        # 1. Verifica se a empresa já existe (procurando por cnpj, nome_comercial ou razao_social)
-        if dados.cnpj:
-            query_busca = text("""
-                SELECT id FROM public.empresa 
-                WHERE cnpj = :cnpj 
-                   OR nome_comercial = :nome_empresa 
-                   OR razao_social = :nome_empresa 
-                LIMIT 1;
-            """)
-            result_busca = db.execute(query_busca, {
-                "cnpj": dados.cnpj.strip(), 
-                "nome_empresa": dados.nome_empresa.strip()
-            })
-        else:
-            query_busca = text("""
-                SELECT id FROM public.empresa 
-                WHERE nome_comercial = :nome_empresa 
-                   OR razao_social = :nome_empresa 
-                LIMIT 1;
-            """)
-            result_busca = db.execute(query_busca, {
-                "nome_empresa": dados.nome_empresa.strip()
-            })
-            
-        empresa_existente = result_busca.fetchone()
+    # 1. Evita duplicidade de e-mail de funcionário
+    email_existe = db.execute(text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;"), {"email": dados.email_admin.strip()}).fetchone()
+    if email_existe:
+        raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado.")
 
-        if empresa_existente:
-            # Caso a empresa já exista, reutilizamos o id puro do mapeamento do banco
-            empresa_id = empresa_existente._mapping["id"]
-        else:
-            # Se não existir, insere a nova empresa mapeando as colunas identificadas
-            query_inserir_empresa = text("""
-                INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) 
-                VALUES (:nome_comercial, :razao_social, :cnpj, NOW(), TRUE) 
-                RETURNING id;
-            """)
-            result_nova_empresa = db.execute(
-                query_inserir_empresa, 
-                {
-                    "nome_comercial": dados.nome_empresa.strip(),
-                    "razao_social": dados.nome_empresa.strip(),
-                    "cnpj": dados.cnpj.strip() if dados.cnpj else None
-                }
-            )
-            # EXTRAÇÃO SEGURA: Acessa o dicionário de mapeamento da linha retornada
-            linha_empresa = result_nova_empresa.fetchone()
-            if not linha_empresa:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Falha ao gerar o identificador da empresa no banco de dados."
-                )
-            empresa_id = linha_empresa._mapping["id"]
+    # 2. Busca ou Insere a Empresa (Modo automático do Postgres)
+    empresa = db.execute(text("SELECT id FROM public.empresa WHERE cnpj = :cnpj OR nome_comercial = :nome LIMIT 1;"), {"cnpj": dados.cnpj, "nome": dados.nome_empresa}).fetchone()
+    
+    if empresa:
+        empresa_id = empresa[0]
+    else:
+        query_empresa = text("INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) VALUES (:nome, :nome, :cnpj, NOW(), TRUE) RETURNING id;")
+        empresa_id = db.execute(query_empresa, {"nome": dados.nome_empresa.strip(), "cnpj": dados.cnpj}).fetchone()[0]
 
-        # 2. Verifica se o e-mail do administrador já está cadastrado na tabela funcionario
-        query_busca_user = text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;")
-        user_existente = db.execute(query_busca_user, {"email": dados.email_admin.strip()}).fetchone()
-        
-        if user_existente:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Este e-mail de administrador já está cadastrado no sistema."
-            )
+    # 3. Insere o Administrador
+    query_user = text("""
+        INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
+        VALUES (:empresa_id, :nome, :email, :senha, 'Administrador', TRUE);
+    """)
+    db.execute(query_user, {
+        "empresa_id": empresa_id,
+        "nome": dados.nome_admin.strip(),
+        "email": dados.email_admin.strip(),
+        "senha": gerar_senha_hash(dados.senha_admin)
+    })
 
-        # 3. Cria o hash seguro para a senha do administrador usando seu security.py
-        senha_criptografada = gerar_senha_hash(dados.senha_admin)
-
-        # 4. Insere o novo usuário vinculando ao empresa_id estabelecido
-        query_inserir_usuario = text("""
-            INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
-            VALUES (:empresa_id, :nome, :email, :senha_hash, 'Administrador', TRUE);
-        """)
-        
-        db.execute(query_inserir_usuario, {
-            "empresa_id": empresa_id,
-            "nome": dados.nome_admin.strip(),
-            "email": dados.email_admin.strip(),
-            "senha_hash": senha_criptografada
-        })
-        
-        # Como estamos usando db.begin(), o commit deve ser feito na transação!
-        transacao.commit() 
-
-        # RETORNO LIMPO: Envia um dicionário padrão que o FastAPI transforma em JSON puro para o celular
-        return {
-            "status": "sucesso",
-            "message": "Empresa e Administrador cadastrados com sucesso!",
-            "empresa_id": str(empresa_id)
-        }
-
-    except HTTPException as http_err:
-        transacao.rollback()
-        raise http_err
-    except Exception as e:
-        transacao.rollback()
-        erro_detalhado = f"Erro ao registrar empresa: {str(e)} -> {traceback.format_exc()}"
-        print(erro_detalhado)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno no servidor ao processar o cadastro."
-        )
+    return {"status": "sucesso", "message": "Cadastro realizado com sucesso!"}
