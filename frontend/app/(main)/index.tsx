@@ -63,8 +63,8 @@ export default function LoginScreen() {
         // Atualiza o estado global de autenticação
         await loginAsStaff(data.usuario.nome);
         
-        // REDIRECIONAMENTO CORRIGIDO: Entra diretamente na pasta (main) vista na estrutura
-        router.replace('/(main)/agenda');
+        // CORREÇÃO: Remove o prefixo do grupo de abas e aponta para a rota limpa
+        router.replace('/agenda');
         return;
       }
 
@@ -108,8 +108,9 @@ export default function LoginScreen() {
 
       const data = await response.json();
 
-      if (response.status === 200) {
-        Alert.alert('Sucesso', 'Empresa e Administrador vinculados com sucesso!', [
+      // CORREÇÃO: Aceita tanto status 200 quanto 201 para sincronizar com o FastAPI
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert('Sucesso', 'Empresa e Administrador cadastrados com sucesso!', [
           {
             text: 'OK',
             onPress: () => {
@@ -252,68 +253,67 @@ export default function LoginScreen() {
   );
 }
 
+// ESTILOS VISUAIS EXPO NATIVE
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
-    padding: 20,
+    padding: 24,
   },
   logo: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1E293B',
     textAlign: 'center',
-    marginBottom: 5,
+    color: '#1E293B',
+    marginBottom: 4,
   },
   subTitle: {
     fontSize: 16,
-    color: '#64748B',
     textAlign: 'center',
-    marginBottom: 30,
+    color: '#64748B',
+    marginBottom: 32,
   },
   input: {
     backgroundColor: '#FFFFFF',
-    padding: 15,
-    borderRadius: 8,
-    fontSize: 16,
-    marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
     color: '#1E293B',
+    marginBottom: 16,
   },
   button: {
     backgroundColor: '#4F46E5',
-    padding: 15,
     borderRadius: 8,
+    padding: 14,
     alignItems: 'center',
-    marginTop: 10,
-    minHeight: 52,
-    justifyContent: 'center',
+    marginTop: 8,
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   registerLink: {
-    marginTop: 25,
+    marginTop: 24,
     alignItems: 'center',
   },
   registerLinkText: {
+    fontSize: 14,
     color: '#64748B',
-    fontSize: 15,
   },
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#F5F7FA',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
     maxHeight: '90%',
   },
   modalTitle: {
@@ -327,17 +327,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#4F46E5',
+    marginTop: 10,
     marginBottom: 8,
-    marginTop: 5,
     textTransform: 'uppercase',
   },
   cancelButton: {
-    marginTop: 15,
+    marginTop: 12,
+    padding: 14,
     alignItems: 'center',
-    padding: 10,
   },
   cancelButtonText: {
+    fontSize: 15,
     color: '#64748B',
-    fontSize: 16,
+    fontWeight: '600',
   },
 });
