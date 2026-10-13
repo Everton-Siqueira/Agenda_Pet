@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
-from security import verificar_senha, criar_token_acesso, obter_senha_hash  # Adicionado obter_senha_hash se precisar criar senha para o admin
+from security import verificar_senha, criar_token_acesso, gerar_senha_hash  # Adicionado obter_senha_hash se precisar criar senha para o admin
 from database import get_db
 from pydantic import BaseModel, EmailStr
 import traceback
