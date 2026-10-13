@@ -17,6 +17,9 @@ class CadastroEmpresaDados(BaseModel):
 
 router = APIRouter(prefix="/api/login", tags=["Autenticação"])
 
+# =========================================================================
+# ROTA 1: LOGIN (Busca por senha_hash e embuti o empresa_id no Token)
+# =========================================================================
 @router.post("")
 def login(dados: LoginDados, db = Depends(get_db)):
     query = text("SELECT id, empresa_id, senha_hash, nome, cargo FROM public.funcionario WHERE email = :email AND ativo = TRUE;")
@@ -37,11 +40,13 @@ def login(dados: LoginDados, db = Depends(get_db)):
         "usuario": {"nome": user._mapping["nome"], "cargo": user._mapping["cargo"]}
     }
 
+# =========================================================================
+# ROTA 2: REGISTRAR EMPRESA (Isola o cliente e grava na coluna senha_hash)
+# =========================================================================
 @router.post("/registrar-empresa")
 def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
-    # Tudo deve rodar sob o controle de um único contexto de transação explícita
     with db.begin():
-        # 1. Verifica duplicidade de e-mail dentro da mesma transação segura
+        # 1. Evita duplicidade de e-mail
         query_email = text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;")
         email_existe = db.execute(query_email, {"email": dados.email_admin.strip()}).fetchone()
         
@@ -70,20 +75,20 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             }).fetchone()
             empresa_id = nova_empresa._mapping["id"]
 
-        # 3. Insere o Administrador
+        # 3. Insere o Administrador mapeando corretamente a coluna 'senha_hash'
         query_user = text("""
             INSERT INTO public.funcionario (empresa_id, nome, email, senha_hash, cargo, ativo) 
-            VALUES (:empresa_id, :nome, :email, :senha, 'Administrador', TRUE);
+            VALUES (:empresa_id, :nome, :email, :senha_hash, 'Administrador', TRUE);
         """)
         db.execute(query_user, {
             "empresa_id": empresa_id,
             "nome": dados.nome_admin.strip(),
             "email": dados.email_admin.strip(),
-            "senha": gerar_senha_hash(dados.senha_admin)
+            "senha_hash": gerar_senha_hash(dados.senha_admin)  # Senha criptografada enviada para :senha_hash
         })
 
-    # O commit ocorre de forma implícita e automática ao sair com sucesso do bloco 'with'
     return {
         "status": "sucesso", 
-        "message": "Cadastro realizado com sucesso!"
+        "message": "Cadastro realizado com sucesso!",
+        "empresa_id": int(empresa_id)
     }
