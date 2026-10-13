@@ -32,7 +32,7 @@ export default function LoginScreen() {
   const { loginAsStaff } = useAuth();
   
   // IP da sua máquina local configurado no backend
-  const apiUrl = 'http://192.168.100.114:8000';
+  const apiUrl = https://clavicle-groggily-devoutly.ngrok-free.dev
 
   const handleLogin = async () => {
     if (!email.trim() || !senha) {
