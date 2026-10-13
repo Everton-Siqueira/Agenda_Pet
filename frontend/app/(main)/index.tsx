@@ -122,16 +122,21 @@ export default function LoginScreen() {
 
       const data = await response.json();
 
-      // CORREÇÃO: Aceita tanto status 200 quanto 201 para sincronizar com o FastAPI
       if (response.status === 200 || response.status === 201) {
-        Alert.alert('Sucesso', 'Empresa e Administrador cadastrados com sucesso!', [
+        Alert.alert('Sucesso 🎉', 'Sua empresa e conta de administrador foram cadastradas com sucesso!', [
           {
-            text: 'OK',
+            text: 'Ir para o Login',
             onPress: () => {
+              // 1. Fecha o modal de cadastro automaticamente
               setModalVisible(false);
-              setEmail(emailAdmin.trim().toLowerCase()); // Preenche o e-mail no login automaticamente
+              
+              // 2. Transfere o e-mail cadastrado direto para o campo de Login
+              setEmail(emailAdmin.trim().toLowerCase()); 
+              
+              // 3. Limpa a senha do login para o usuário digitar a dele
               setSenha('');
-              // Limpa o formulário de cadastro
+              
+              // 4. Limpa completamente os campos do formulário de cadastro para a próxima vez
               setNomeEmpresa('');
               setCnpj('');
               setNomeAdmin('');
@@ -143,14 +148,14 @@ export default function LoginScreen() {
         return;
       }
 
-      Alert.alert('Erro no cadastro', data?.detail || 'Falha ao registrar empresa.');
+      Alert.alert('Erro no cadastro', data?.detail || 'Falha ao registrar empresa. Verifique os dados.');
     } catch (error: any) {
-      Alert.alert('Erro de Conexão', 'Não foi possível se conectar ao servidor backend.');
+      Alert.alert('Erro de Conexão', 'Não foi possível se conectar ao servidor backend. Verifique se o Ngrok/FastAPI está rodando.');
     } finally {
       setCadastroLoading(false);
     }
   };
-
+  
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>🐾 Agenda Pet SaaS</Text>
