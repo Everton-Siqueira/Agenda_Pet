@@ -58,13 +58,27 @@ export default function LoginScreen() {
       const data = await response.json();
 
       if (response.status === 200) {
+        // 1. Salva o token localmente no dispositivo
         await AsyncStorage.setItem('@agenda-pet/token', data.access_token);
         
-        // Atualiza o estado global de autenticação
-        await loginAsStaff(data.usuario.nome);
+        // 2. Atualiza o estado global de autenticação
+        try {
+          await loginAsStaff(data.usuario.nome);
+        } catch (authError) {
+          console.log("Aviso no Contexto de Autenticação:", authError);
+        }
         
-        // CORREÇÃO: Remove o prefixo do grupo de abas e aponta para a rota limpa
-        router.replace('/agenda');
+        // 3. TENTATIVAS DE REDIRECIONAMENTO (BLINDADO)
+        // Tentamos os caminhos possíveis para garantir que o Expo Router ache o arquivo agenda.tsx
+        try {
+          router.replace('/agenda');
+        } catch (e) {
+          try {
+            router.replace('/(main)/agenda');
+          } catch (err2) {
+            router.push('/agenda');
+          }
+        }
         return;
       }
 
