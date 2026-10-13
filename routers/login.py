@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
-from security import verificar_senha, criar_token_acesso, gerar_senha_hash # Import correto
+from security import verificar_senha, criar_token_acesso, gerar_senha_hash
 from database import get_db
 from pydantic import BaseModel, EmailStr
 import traceback
@@ -79,7 +79,7 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
         print(erro_detalhado)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro interno no servidor ao autenticar."
+            detail="Erro interno no servidor ao autenticar."
         )
 
 # ROTA: Cadastro de nova empresa com aproveitamento de dados existentes
@@ -113,10 +113,10 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
         empresa_existente = result_busca.fetchone()
 
         if empresa_existente:
-            # Caso a empresa já exista, reutilizamos o id do banco
+            # Caso a empresa já exista, reutilizamos o id puro do banco de dados
             empresa_id = empresa_existente._mapping["id"]
         else:
-            # Se não existir, insere a nova empresa batendo com as colunas reais do seu banco
+            # Se não existir, insere a nova empresa mapeando as colunas identificadas
             query_inserir_empresa = text("""
                 INSERT INTO public.empresa (nome_comercial, razao_social, cnpj, criado_em, ativo) 
                 VALUES (:nome_comercial, :razao_social, :cnpj, NOW(), TRUE) 
@@ -126,13 +126,13 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                 query_inserir_empresa, 
                 {
                     "nome_comercial": dados.nome_empresa.strip(),
-                    # Se você não tiver a Razão Social separada no front, usamos o mesmo nome para preencher o campo obrigatório
                     "razao_social": dados.nome_empresa.strip(),
                     "cnpj": dados.cnpj.strip() if dados.cnpj else None
                 }
             )
-            # Extrai o id retornado de forma limpa
-            empresa_id = result_nova_empresa.fetchone()[0]
+            # Extração correta da primeira posição para obter a string pura do UUID
+            linha_empresa = result_nova_empresa.fetchone()
+            empresa_id = linha_empresa[0] if linha_empresa else None
 
         # 2. Verifica se o e-mail do administrador já está cadastrado na tabela funcionario
         query_busca_user = text("SELECT id FROM public.funcionario WHERE email = :email LIMIT 1;")
@@ -160,7 +160,7 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             "senha_hash": senha_criptografada
         })
         
-        db.commit() # Confirma a transação com sucesso
+        db.commit() # Confirma a gravação de vez
 
         return {
             "status": "sucesso",
