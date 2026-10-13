@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy import text
-from security import verificar_senha, criar_token_acesso, gerar_senha_hash
+# Importa as funções exatamente como estão escritas no seu security.py
+from security import verificar_senha, criar_token_acesso, gerar_senha_hash 
 from database import get_db
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 import traceback
 
 # Modelo para receber as requisições de Login
@@ -10,12 +11,12 @@ class LoginDados(BaseModel):
     email: str
     senha: str
 
-# Modelo para receber as requisições de Cadastro de Nova Empresa
+# Modelo para receber as requisições de Cadastro de Nova Empresa (Campos limpos)
 class CadastroEmpresaDados(BaseModel):
     nome_empresa: str
     cnpj: str | None = None
     nome_admin: str
-    email_admin: EmailStr
+    email_admin: str  # Removido EmailStr para evitar problemas de dependência
     senha_admin: str
 
 router = APIRouter(prefix="/api/login", tags=["Autenticação"])
@@ -47,7 +48,7 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
         nome_usuario = dados_banco["nome"]
         cargo_usuario = dados_banco["cargo"]
 
-        # 3. Validação da Senha
+        # 3. Validação da Senha usando o security.py
         if not verificar_senha(dados_login.senha, senha_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -75,7 +76,7 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
     except HTTPException as http_err:
         raise http_err
     except Exception as e:
-        erro_detalhado = f"Erro Interno no Python: {str(e)} -> Linha do erro: {traceback.format_exc()}"
+        erro_detalhado = f"Erro Interno no Python ao autenticar: {str(e)} -> {traceback.format_exc()}"
         print(erro_detalhado)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -85,6 +86,8 @@ def login(dados_login: LoginDados, db = Depends(get_db)):
 # ROTA: Cadastro de nova empresa com aproveitamento de dados existentes
 @router.post("/registrar-empresa")
 def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
+    # Iniciamos uma transação explícita na conexão crua para garantir controle total
+    transacao = db.begin()
     try:
         # 1. Verifica se a empresa já existe (procurando por cnpj, nome_comercial ou razao_social)
         if dados.cnpj:
@@ -149,7 +152,7 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
                 detail="Este e-mail de administrador já está cadastrado no sistema."
             )
 
-        # 3. Cria o hash seguro para a senha do administrador
+        # 3. Cria o hash seguro para a senha do administrador usando seu security.py
         senha_criptografada = gerar_senha_hash(dados.senha_admin)
 
         # 4. Insere o novo usuário vinculando ao empresa_id estabelecido
@@ -165,9 +168,10 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
             "senha_hash": senha_criptografada
         })
         
-        db.commit() # Confirma a gravação de vez de todas as tabelas
+        # Como estamos usando db.begin(), o commit deve ser feito na transação!
+        transacao.commit() 
 
-        # RETORNO LIMPADO: Força o ID a virar String para que o JSON do FastAPI envie com sucesso
+        # RETORNO LIMPO: Envia um dicionário padrão que o FastAPI transforma em JSON puro para o celular
         return {
             "status": "sucesso",
             "message": "Empresa e Administrador cadastrados com sucesso!",
@@ -175,10 +179,10 @@ def registrar_empresa(dados: CadastroEmpresaDados, db = Depends(get_db)):
         }
 
     except HTTPException as http_err:
-        db.rollback()
+        transacao.rollback()
         raise http_err
     except Exception as e:
-        db.rollback()
+        transacao.rollback()
         erro_detalhado = f"Erro ao registrar empresa: {str(e)} -> {traceback.format_exc()}"
         print(erro_detalhado)
         raise HTTPException(
