@@ -6,7 +6,6 @@ import { AuthProvider } from "../src/context/AuthContext";
 import "../global.css";
 
 export default function RootLayout() {
-  // Deixamos o layout livre, sem travar ou redirecionar ninguém à força por enquanto
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
