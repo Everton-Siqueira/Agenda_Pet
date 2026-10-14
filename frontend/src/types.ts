@@ -14,8 +14,8 @@ export type Pet = {
 
 export type Servico = {
   id: number;
-  tipo_servico: string;
-  valor: number | string;
+  nome_servico: string;
+  preco: number | string;
 };
 
 export type Atendimento = {
