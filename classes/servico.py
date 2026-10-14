@@ -9,7 +9,7 @@ class Servico(BaseModel):
         description="Nome do serviço"
     )
 
-    preco: Decimal = Field(
+    preco: float = Field(
         ..., 
         gt=0,
         decimal_places=2,
