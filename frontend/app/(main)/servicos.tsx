@@ -124,7 +124,7 @@ export default function ServicosScreen() {
             placeholder="80.00"
             keyboardType="decimal-pad"
             value={form.valor}
-            onChangeText={(preco) => setForm((current) => ({ ...current, preco }))}
+            onChangeText={(valor) => setForm((current) => ({ ...current, valor }))}
           />
           <Button title={editingId ? "Salvar" : "Cadastrar serviço"} onPress={handleSave} loading={saving} />
         </Card>
