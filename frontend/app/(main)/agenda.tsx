@@ -45,7 +45,7 @@ export default function AgendaScreen() {
   }, [pets]);
 
   const servicosOrdenados = useMemo(() => {
-    return [...servicos].sort((a, b) => a.tipo_servico.localeCompare(b.tipo_servico));
+    return [...servicos].sort((a, b) => a.nome_servico.localeCompare(b.nome_servico));
   }, [servicos]);
 
   const petsFiltradosNoForm = useMemo(() => {
@@ -158,7 +158,7 @@ export default function AgendaScreen() {
 
   const atendimentosFiltrados = atendimentos.filter((item) => {
     const nomePet = petMap.get(item.id_pet)?.nome_pet?.toLowerCase() ?? "";
-    const tipoServico = servicoMap.get(item.id_servico)?.tipo_servico?.toLowerCase() ?? "";
+    const tipoServico = servicoMap.get(item.id_servico)?.nome_servico?.toLowerCase() ?? "";
     const termoBusca = busca.toLowerCase();
     return nomePet.includes(termoBusca) || tipoServico.includes(termoBusca);
   });
@@ -227,7 +227,7 @@ export default function AgendaScreen() {
                 {pet ? pet.nome_pet : `Pet #${item.id_pet}`}
               </Text>
               <Text className="text-sm text-slate-500">
-                {servico ? servico.tipo_servico : `Serviço #${item.id_servico}`}
+                {servico ? servico.nome_servico : `Serviço #${item.id_servico}`}
               </Text>
             </View>
             
@@ -373,13 +373,13 @@ export default function AgendaScreen() {
                 {servicosOrdenados.map((servico) => (
                   <Chip
                     key={servico.id}
-                    label={`${servico.tipo_servico} (${formatMoney(servico.valor)})`}
+                    label={`${servico.nome_servico} (${formatMoney(servico.preco)})`}
                     selected={form.id_servico === String(servico.id)}
                     onPress={() =>
                       setForm((current) => ({
                         ...current,
                         id_servico: String(servico.id),
-                        valor: String(servico.valor),
+                        valor: String(servico.preco),
                       }))
                     }
                   />
