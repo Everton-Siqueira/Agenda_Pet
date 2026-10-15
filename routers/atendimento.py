@@ -3,8 +3,6 @@ from sqlalchemy import text
 from database import engine
 from security import obter_usuario_logado
 
-# Certifique-se de que o caminho de importação da sua classe Pydantic está correto
-from schemas.atendimento import Atendimento  
 
 router = APIRouter(prefix="/atendimento", tags=["Atendimento / Agenda"])
 
