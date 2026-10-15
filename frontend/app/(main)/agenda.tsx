@@ -32,14 +32,12 @@ export default function AgendaScreen() {
   const [form, setForm] = useState(emptyForm);
   const [busca, setBusca] = useState("");
   const [buscaPetForm, setBuscaPetForm] = useState("");
-  
 
   const petMap = useMemo(() => new Map((pets || []).map((pet) => [pet.id, pet])), [pets]);
   const servicoMap = useMemo(
     () => new Map((servicos || []).map((servico) => [servico.id, servico])),
     [servicos]
   );
-
   const petsOrdenados = useMemo(() => {
     return [...pets].sort((a, b) => a.nome_pet.localeCompare(b.nome_pet));
   }, [pets]);
@@ -63,7 +61,6 @@ export default function AgendaScreen() {
         petApi.list(),
         servicoApi.list(),
       ]);
-      
       setAtendimentos(agenda);
       setPets(petList);
       setServicos(servicoList);
@@ -89,9 +86,16 @@ export default function AgendaScreen() {
 
   function openEdit(item: Atendimento) {
     setEditingId(item.id);
+    
+    let dataExibicao = String(item.data_atendimento);
+    if (dataExibicao.includes("-")) {
+      const [ano, mes, dia] = dataExibicao.split("-");
+      dataExibicao = `${dia}/${mes}/${ano}`;
+    }
+
     setForm({
       id_pet: String(item.id_pet),
-      data_atendimento: String(item.data_atendimento), 
+      data_atendimento: dataExibicao,
       horario_atendimento: String(item.horario_atendimento).slice(0, 5),
       id_servico: String(item.id_servico),
       valor: String(item.valor),
@@ -100,15 +104,16 @@ export default function AgendaScreen() {
     setBuscaPetForm("");
     setFormOpen(true);
   }
-
   async function handleSave() {
     setError(null);
     setSaving(true);
 
+    const dataLimpaParaAPI = form.data_atendimento.replace(/\D/g, "").trim();
+
     const payload = {
       id_pet: Number(form.id_pet),
-      data_atendimento: form.data_atendimento.trim(), 
-      horario_atendimento: form.horario_atendimento.slice(0, 5), 
+      data_atendimento: dataLimpaParaAPI,
+      horario_atendimento: form.horario_atendimento.slice(0, 5),
       id_servico: Number(form.id_servico),
       valor: Number(String(form.valor).replace(",", ".")),
       status: form.status as "pendente" | "concluido" | "cancelado",
@@ -150,7 +155,7 @@ export default function AgendaScreen() {
     try {
       setError(null);
       await atendimentoApi.updateStatus(id, "concluido");
-      await load(); 
+      await load();
     } catch (err) {
       setError(getErrorMessage(err));
     }
@@ -162,7 +167,6 @@ export default function AgendaScreen() {
     const termoBusca = busca.toLowerCase();
     return nomePet.includes(termoBusca) || tipoServico.includes(termoBusca);
   });
-
   const gruposPorAbas = useMemo(() => {
     const grupos: { [data: string]: Atendimento[] } = {};
 
@@ -179,6 +183,10 @@ export default function AgendaScreen() {
     });
 
     const converterParaData = (dataStr: string) => {
+      if (dataStr.includes("-")) {
+        const [ano, mes, dia] = dataStr.split("-");
+        return new Date(Number(ano), Number(mes) - 1, Number(dia));
+      }
       const [dia, mes, ano] = dataStr.split("/");
       return new Date(Number(ano), Number(mes) - 1, Number(dia));
     };
@@ -245,7 +253,7 @@ export default function AgendaScreen() {
 
           <View className="flex-row justify-between items-center border-t border-slate-100 pt-3">
             <Text className="text-base font-bold text-slate-700">
-              {formatMoney(item.valor)}
+              {formatMoney(Number(item.valor))}
             </Text>
             
             <View className="flex-row gap-2">
@@ -292,45 +300,22 @@ export default function AgendaScreen() {
       <ErrorBanner message={error} />
 
       <View className="flex-row flex-wrap gap-2 mb-4">
-        <Pressable
-          onPress={() => router.replace("/agenda")}
-          className="bg-indigo-600 px-4 py-2 rounded-lg"
-        >
+        <Pressable onPress={() => router.replace("/agenda")} className="bg-indigo-600 px-4 py-2 rounded-lg">
           <Text className="text-white font-semibold">📅 Agenda</Text>
         </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/tutores")}
-          className="bg-slate-100 px-4 py-2 rounded-lg"
-        >
+        <Pressable onPress={() => router.push("/tutores")} className="bg-slate-100 px-4 py-2 rounded-lg">
           <Text className="text-slate-700 font-semibold">👤 Tutores</Text>
         </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/pets")}
-          className="bg-slate-100 px-4 py-2 rounded-lg"
-        >
+        <Pressable onPress={() => router.push("/pets")} className="bg-slate-100 px-4 py-2 rounded-lg">
           <Text className="text-slate-700 font-semibold">🐶 Pets</Text>
         </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/servicos")}
-          className="bg-slate-100 px-4 py-2 rounded-lg"
-        >
+        <Pressable onPress={() => router.push("/servicos")} className="bg-slate-100 px-4 py-2 rounded-lg">
           <Text className="text-slate-700 font-semibold">✂️ Serviços</Text>
         </Pressable>
-
-        <Pressable
-          onPress={() => router.push("/dashboard")}
-          className="bg-slate-100 px-4 py-2 rounded-lg"
-        >
+        <Pressable onPress={() => router.push("/dashboard")} className="bg-slate-100 px-4 py-2 rounded-lg">
           <Text className="text-slate-700 font-semibold">📊 Dashboard</Text>
         </Pressable>
       </View>
-
-      <ErrorBanner message={error} />
-
-
       {formOpen ? (
         <ScrollView className="mb-4" showsVerticalScrollIndicator={false}>
           <Card className="gap-4 p-4">
@@ -338,7 +323,7 @@ export default function AgendaScreen() {
               {editingId ? "Editar atendimento" : "Novo atendimento"}
             </Text>
             
-            {/* 🟢 SELEÇÃO DE PET (Apenas Busca Dinâmica e Limpa) */}
+            {/* SELEÇÃO DE PET */}
             <View className="gap-2">
               <Text className="text-sm font-semibold text-slate-700">Buscar Pet para o Atendimento</Text>
               <TextInput
@@ -347,7 +332,6 @@ export default function AgendaScreen() {
                 value={buscaPetForm}
                 onChangeText={(txt) => setBuscaPetForm(txt)}
               />
-              
               <View className="flex-row flex-wrap gap-2 mt-1">
                 {buscaPetForm.trim() === "" ? (
                   <Text className="text-xs text-slate-400 italic p-1">Digite acima para listar os pets...</Text>
@@ -366,14 +350,14 @@ export default function AgendaScreen() {
               </View>
             </View>
             
-            {/* --- SELEÇÃO DE SERVIÇO --- */}
+            {/* SELEÇÃO DE SERVIÇO */}
             <View className="gap-1">
               <Text className="text-sm text-slate-500 font-medium">Selecione o serviço (A-Z)</Text>
               <View className="flex-row flex-wrap gap-2">
                 {servicosOrdenados.map((servico) => (
                   <Chip
                     key={servico.id}
-                    label={`${servico.nome_servico} (${formatMoney(servico.preco)})`}
+                    label={`${servico.nome_servico} (${formatMoney(Number(servico.preco))})`}
                     selected={form.id_servico === String(servico.id)}
                     onPress={() =>
                       setForm((current) => ({
@@ -387,18 +371,18 @@ export default function AgendaScreen() {
               </View>
             </View>
             
-            {/* --- DATA --- */}
+            {/* DATA */}
             <View className="gap-1">
               <Text className="text-sm font-medium text-slate-600">Data (DD/MM/AAAA)</Text>
               <TextInput
                 style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#ffffff' }}
-                placeholder="18/09/2026"
+                placeholder="25/10/2026"
                 value={form.data_atendimento}
                 onChangeText={(txt) => setForm((current) => ({ ...current, data_atendimento: txt }))}
               />
             </View>
             
-            {/* --- HORÁRIO --- */}
+            {/* HORÁRIO */}
             <View className="gap-1">
               <Text className="text-sm font-medium text-slate-600">Horário</Text>
               <View className="flex-row flex-wrap gap-2">
@@ -413,77 +397,63 @@ export default function AgendaScreen() {
               </View>
             </View>
 
-            {/* --- VALOR COBRADO --- */}
+            {/* VALOR COBRADO */}
             <View className="gap-1">
               <Text className="text-sm font-medium text-slate-600">Valor Cobrado (R\$)</Text>
               <TextInput
                 style={{ height: 45, borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, paddingHorizontal: 12, backgroundColor: '#ffffff' }}
-                placeholder="0.00"
-                keyboardType="numeric"
+                placeholder="70.00"
                 value={form.valor}
                 onChangeText={(txt) => setForm((current) => ({ ...current, valor: txt }))}
+                keyboardType="numeric"
               />
             </View>
 
-            <Button title={saving ? "Salvando..." : "Salvar Agendamento"} onPress={handleSave} disabled={saving} />
+            <View className="mt-2">
+              <Button title={saving ? "Salvando..." : "Salvar Agendamento"} onPress={handleSave} disabled={saving} />
+            </View>
           </Card>
         </ScrollView>
       ) : (
-      <View className="flex-1 gap-4">
-          <Input
-              placeholder="Buscar por pet ou serviço..."
-              value={busca}
-              onChangeText={setBusca} label={""}          />
+        <View className="flex-1 gap-4">
+          <Input placeholder="🔍 Filtrar agendamentos por pet ou serviço..." value={busca} onChangeText={setBusca} label={""} />
 
-          {atendimentosFiltrados.length === 0 ? (
-            <EmptyState title="Nenhum atendimento" subtitle="Nenhum atendimento agendado encontrado." />
-          ) : (
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-              
-              {/* --- HOJE --- */}
-              {gruposPorAbas.hoje.map((grupo) => (
-                <View key={grupo.data} className="mb-6 bg-slate-50 p-2 rounded-xl border border-slate-200/60">
-                  <Text className="text-sm font-bold text-emerald-600 uppercase tracking-wider mb-2 px-2">
-                    ☀️ Hoje ({grupo.data})
-                  </Text>
-                  <View className="gap-3">
-                    {renderizarCards(grupo.atendimentos)}
-                  </View>
+          <ScrollView showsVerticalScrollIndicator={false} className="gap-4">
+            <Text className="text-lg font-bold text-slate-900 mt-2">📌 Hoje</Text>
+            {gruposPorAbas.hoje.length === 0 ? (
+              <Text className="text-sm text-slate-400 italic p-2">Nenhum atendimento para hoje.</Text>
+            ) : (
+              gruposPorAbas.hoje.map((grupo) => (
+                <View key={grupo.data} className="gap-2">
+                  {renderizarCards(grupo.atendimentos)}
                 </View>
-              ))}
+              ))
+            )}
 
-              {/* --- PRÓXIMOS DIAS --- */}
-              {gruposPorAbas.proximos.length > 0 && (
-                <View className="mb-6">
-                  <Text className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-3 bg-blue-50/50 py-1 px-2 rounded self-start">
-                    🗓️ Próximos Agendamentos
-                  </Text>
-                  {gruposPorAbas.proximos.map((grupo) => (
-                    <View key={grupo.data} className="mb-4 pl-2 border-l-2 border-blue-200">
-                      <Text className="text-sm font-semibold text-slate-500 mb-2">{grupo.data}</Text>
-                      <View className="gap-3">{renderizarCards(grupo.atendimentos)}</View>
-                    </View>
-                  ))}
+            <Text className="text-lg font-bold text-slate-900 mt-4">📅 Próximos Dias</Text>
+            {gruposPorAbas.proximos.length === 0 ? (
+              <Text className="text-sm text-slate-400 italic p-2">Nenhum próximo atendimento.</Text>
+            ) : (
+              gruposPorAbas.proximos.map((grupo) => (
+                <View key={grupo.data} className="gap-2">
+                  <Text className="text-xs font-semibold text-slate-500 px-1">{grupo.data}</Text>
+                  {renderizarCards(grupo.atendimentos)}
                 </View>
-              )}
+              ))
+            )}
 
-              {/* --- JÁ PASSARAM --- */}
-              {gruposPorAbas.passados.length > 0 && (
-                <View className="mb-6 opacity-75">
-                  <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 bg-slate-100 py-1 px-2 rounded self-start">
-                    ↩️ Histórico / Dias Passados
-                  </Text>
-                  {gruposPorAbas.passados.map((grupo) => (
-                    <View key={grupo.data} className="mb-4 pl-2 border-l-2 border-slate-200">
-                      <Text className="text-sm font-semibold text-slate-400 mb-2">{grupo.data}</Text>
-                      <View className="gap-3">{renderizarCards(grupo.atendimentos)}</View>
-                    </View>
-                  ))}
+            <Text className="text-lg font-bold text-slate-900 mt-4">⏳ Passados</Text>
+            {gruposPorAbas.passados.length === 0 ? (
+              <Text className="text-sm text-slate-400 italic p-2">Nenhum histórico anterior.</Text>
+            ) : (
+              gruposPorAbas.passados.map((grupo) => (
+                <View key={grupo.data} className="gap-2">
+                  <Text className="text-xs font-semibold text-slate-500 px-1">{grupo.data}</Text>
+                  {renderizarCards(grupo.atendimentos)}
                 </View>
-              )}
-
-            </ScrollView>
-          )}
+              ))
+            )}
+          </ScrollView>
         </View>
       )}
     </Screen>
