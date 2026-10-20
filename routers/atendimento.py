@@ -145,3 +145,54 @@ def update_atendimento(
             status_code=500,
             detail=str(e)
         )
+
+@router.patch("/{atendimento_id}/status")
+def update_status_atendimento(
+    atendimento_id: int,
+    dados: dict = Body(...),
+    usuario: dict = Depends(obter_usuario_logado)
+):
+    novo_status = dados.get("status")
+
+    if novo_status not in ["pendente", "concluido", "cancelado"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Status inválido."
+        )
+
+    try:
+        with engine.begin() as conn:
+            sql = """
+                UPDATE atendimento
+                SET status = :status
+                WHERE id = :atendimento_id
+                AND empresa_id = :empresa_id
+            """
+
+            result = conn.execute(
+                text(sql),
+                {
+                    "status": novo_status,
+                    "atendimento_id": atendimento_id,
+                    "empresa_id": usuario["empresa_id"]
+                }
+            )
+
+            if result.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Agendamento não encontrado ou sem permissão para alterar."
+                )
+
+            return {
+                "message": "Status do atendimento atualizado com sucesso!",
+                "status": novo_status
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
