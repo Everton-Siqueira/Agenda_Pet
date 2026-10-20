@@ -46,9 +46,15 @@ export default function TutoresScreen() {
 
   function openEdit(tutor: Tutor) {
     setEditingId(tutor.id);
-    setForm({ nome: tutor.nome, celular: tutor.celular, endereco: tutor.endereco });
-    setFormOpen(true);
-  }
+
+    setForm({
+      nome: String(tutor.nome ?? ""),
+      celular: String(tutor.celular ?? ""),
+      endereco: String(tutor.endereco ?? ""),
+    });
+
+  setFormOpen(true);
+}
 
   async function handleSave() {
     setError(null);
