@@ -54,9 +54,15 @@ def create_atendimento(
                 "id": result.fetchone()[0]
             }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
 
+    except Exception as e:
+        print(f"Erro ao criar agendamento: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível salvar o agendamento. Verifique os dados e tente novamente. Se o problema continuar, entre em contato com o responsável pelo sistema."
+        )
 
 @router.get("")
 def get_atendimentos(
