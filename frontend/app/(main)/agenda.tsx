@@ -9,6 +9,22 @@ import { confirmAction } from "../../src/utils/confirm";
 import { formatDate, formatMoney, formatTime, TIME_SLOTS } from "../../src/utils/format";
 import type { Atendimento, Pet, Servico } from "../../src/types";
 
+function formatarDataAgenda(data: string) {
+  const partes = data.slice(0, 10).split(/[-/]/);
+
+  if (partes.length !== 3) {
+    return data;
+  }
+
+  // Data no formato AAAA-MM-DD ou AAAA/MM/DD
+  if (partes[0].length === 4) {
+    const [ano, mes, dia] = partes;
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  return data;
+}
+
 const emptyForm = {
   id_pet: "",
   data_atendimento: "",
@@ -436,7 +452,7 @@ export default function AgendaScreen() {
             ) : (
               gruposPorAbas.proximos.map((grupo) => (
                 <View key={grupo.data} className="gap-2">
-                  <Text className="text-xs font-semibold text-slate-500 px-1">{grupo.data}</Text>
+                  <Text className="text-xs font-semibold text-slate-500 px-1">{formatarDataAgenda(grupo.data)}</Text>
                   {renderizarCards(grupo.atendimentos)}
                 </View>
               ))
@@ -448,7 +464,7 @@ export default function AgendaScreen() {
             ) : (
               gruposPorAbas.passados.map((grupo) => (
                 <View key={grupo.data} className="gap-2">
-                  <Text className="text-xs font-semibold text-slate-500 px-1">{grupo.data}</Text>
+                  <Text className="text-xs font-semibold text-slate-500 px-1">{formatarDataAgenda(grupo.data)}</Text>
                   {renderizarCards(grupo.atendimentos)}
                 </View>
               ))
