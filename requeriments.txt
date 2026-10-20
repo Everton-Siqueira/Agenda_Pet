@@ -1,7 +1,9 @@
 uvicorn
 fastapi
 sqlalchemy
-psycopg2
-dotenv
+psycopg2-binary
+python-dotenv
 pydantic
-datetime
+email-validator
+passlib[bcrypt]
+PyJWT
