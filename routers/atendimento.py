@@ -196,3 +196,42 @@ def update_status_atendimento(
             status_code=500,
             detail=str(e)
         )
+
+@router.delete("/{atendimento_id}")
+def delete_atendimento(
+    atendimento_id: int,
+    usuario: dict = Depends(obter_usuario_logado)
+):
+    try:
+        with engine.begin() as conn:
+            sql = """
+                DELETE FROM atendimento
+                WHERE id = :atendimento_id
+                AND empresa_id = :empresa_id
+            """
+
+            result = conn.execute(
+                text(sql),
+                {
+                    "atendimento_id": atendimento_id,
+                    "empresa_id": usuario["empresa_id"]
+                }
+            )
+
+            if result.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Agendamento não encontrado ou sem permissão para excluir."
+                )
+
+            return {
+                "message": "Agendamento excluído com sucesso!"
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
