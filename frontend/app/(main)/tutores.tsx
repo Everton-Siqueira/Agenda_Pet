@@ -62,9 +62,9 @@ export default function TutoresScreen() {
     }
 
     const payload = {
-      nome: form.nome.trim(),
-      celular: form.celular.trim(),
-      endereco: form.endereco.trim(),
+      nome: String(form.nome ?? "").trim(),
+      celular: String(form.celular ?? "").trim(),
+      endereco: String(form.endereco ?? "").trim(),
     };
 
     setSaving(true);
