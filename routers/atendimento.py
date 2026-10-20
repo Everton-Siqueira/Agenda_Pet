@@ -191,10 +191,12 @@ def update_status_atendimento(
 
     except HTTPException:
         raise
+
     except Exception as e:
+        print(f"Erro ao atualizar agendamento: {e}")
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail="Não foi possível atualizar o agendamento. Tente novamente."
         )
 
 @router.delete("/{atendimento_id}")
