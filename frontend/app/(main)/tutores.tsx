@@ -52,7 +52,11 @@ export default function TutoresScreen() {
 
   async function handleSave() {
     setError(null);
-    if (!form.nome.trim() || !form.celular.trim() || !form.endereco.trim()) {
+    if (
+      !String(form.nome ?? "").trim() ||
+      !String(form.celular ?? "").trim() ||
+      !String(form.endereco ?? "").trim()
+    ) {
       setError("Preencha todos os campos.");
       return;
     }
