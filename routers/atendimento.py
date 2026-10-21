@@ -145,6 +145,8 @@ def update_atendimento(
             return {
                 "message": "Agendamento atualizado com sucesso!"
             }
+    except HTTPException:
+        raise
 
     except Exception as e:
         raise HTTPException(
