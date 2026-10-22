@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { API_URL, getErrorMessage } from "../../src/api/client";
 import { dashboardApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
-import { Card, ErrorBanner } from "../../src/components/ui";
+import { Button, Card, ErrorBanner } from "../../src/components/ui";
 import { formatMoney } from "../../src/utils/format";
 
 interface PeriodoMetricas {
@@ -49,6 +49,7 @@ interface NovaDashboardDados {
 }
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const [dados, setDados] = useState<NovaDashboardDados | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +75,16 @@ export default function DashboardScreen() {
 
   return (
     <Screen title="Painel de Controle" subtitle={`Indicadores Gerenciais · API ${API_URL}`} loading={loading}>
+
+      
+      <View className="mb-4">
+        <Button
+          title="← Voltar para Agenda"
+          variant="secondary"
+          onPress={() => router.replace("/(main)/agenda")}
+        />
+      </View>
+
       <ErrorBanner message={error} />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
