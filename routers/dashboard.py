@@ -39,7 +39,7 @@ def get_resumo_gerencial(usuario: dict = Depends(obter_usuario_logado)):
                 ).scalar() or 0
 
             # 2. ATENDIMENTOS E FATURAMENTO (Isolado com WHERE empresa_id)
-            sql_metricas = """
+                sql_metricas = """
                 SELECT 
                     COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
                     COUNT(id) FILTER (WHERE data_atendimento >= :semana AND status != 'cancelado') as atend_semana,
