@@ -2,13 +2,12 @@ import { useCallback, useMemo, useState } from "react";
 import { Pressable, Text, View, TextInput, ScrollView } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
-import { atendimentoApi, petApi, servicoApi } from "../../src/api/petshop";
+import { atendimentoApi, petApi, servicoApi, tutorApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
 import { Button, Card, Chip, EmptyState, ErrorBanner, Input } from "../../src/components/ui";
 import { confirmAction } from "../../src/utils/confirm";
 import { formatDate, formatMoney, formatTime, TIME_SLOTS } from "../../src/utils/format";
-import type { Atendimento, Pet, Servico } from "../../src/types";
-
+import type { Atendimento, Pet, Servico, Tutor } from "../../src/types";
 function formatarDataAgenda(data: string) {
   const partes = data.slice(0, 10).split(/[-/]/);
 
