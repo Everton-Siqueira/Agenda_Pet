@@ -33,10 +33,10 @@ def get_resumo_gerencial(usuario: dict = Depends(obter_usuario_logado)):
 
         with engine.connect() as conn:
             # 1. TOTAL DE PETS (Isolado por empresa)
-            total_pets = conn.execute(
-                text("SELECT COUNT(id) FROM pet WHERE empresa_id = :empresa_id AND ativo = TRUE"), 
+                total_pets = conn.execute(
+                text("SELECT COUNT(id) FROM pet WHERE empresa_id = :empresa_id"),
                 {"empresa_id": empresa_id}
-            ).scalar() or 0
+                ).scalar() or 0
 
             # 2. ATENDIMENTOS E FATURAMENTO (Isolado com WHERE empresa_id)
             sql_metricas = """
