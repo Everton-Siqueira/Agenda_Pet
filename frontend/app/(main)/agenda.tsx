@@ -373,7 +373,7 @@ export default function AgendaScreen() {
                   petsFiltradosNoForm.map((pet) => (
                     <Chip
                       key={pet.id}
-                      label={`${pet.nome_pet} (#${pet.id})`}
+                      label={`${pet.nome_pet} — Tutor: ${tutorMap.get(pet.id_tutor)?.nome ?? `#${pet.id_tutor}`}`}
                       selected={form.id_pet === String(pet.id)}
                       onPress={() => setForm((current) => ({ ...current, id_pet: String(pet.id) }))}
                     />
