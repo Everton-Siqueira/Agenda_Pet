@@ -257,6 +257,7 @@ export default function AgendaScreen() {
     return atendimentosLista.map((item) => {
       const pet = petMap.get(item.id_pet);
       const servico = servicoMap.get(item.id_servico);
+      const tutor = pet ? tutorMap.get(pet.id_tutor) : undefined;
       const isRealizado = item.status === "concluido";
 
       return (
