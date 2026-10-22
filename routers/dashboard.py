@@ -79,19 +79,18 @@ def get_resumo_gerencial(usuario: dict = Depends(obter_usuario_logado)):
 
             # 3. DETALHAMENTO DE SERVIÇOS (Garantido relacionamento correto com empresa_id)
             sql_servicos = """
-                SELECT 
-                    s.tipo_servico,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje AND a.status = 'concluido') as qtd_hoje,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana AND a.status = 'concluido') as qtd_semana,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes AND a.status = 'concluido') as qtd_mes,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano AND a.status = 'concluido') as qtd_ano
+                SELECT s.nome_servico AS tipo_servico,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje AND a.status = 'concluido') AS qtd_hoje,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana AND a.status = 'concluido') AS qtd_semana,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes AND a.status = 'concluido') AS qtd_mes,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano AND a.status = 'concluido') AS qtd_ano
                 FROM atendimento a
                 JOIN servico s ON a.id_servico = s.id AND s.empresa_id = a.empresa_id
-                WHERE a.data_atendimento >= :inicio_ano 
-                  AND a.status = 'concluido'
-                  AND a.empresa_id = :empresa_id
-                GROUP BY s.tipo_servico
-            """
+                WHERE a.data_atendimento >= :inicio_ano
+                AND a.status = 'concluido'
+                AND a.empresa_id = :empresa_id
+                GROUP BY s.nome_servico
+                """
             result_servicos = conn.execute(text(sql_servicos), parametros_data).mappings().fetchall()
             
             detalhe_hoje = formatar_servicos(result_servicos, "qtd_hoje")
