@@ -93,10 +93,25 @@ def get_resumo_gerencial(usuario: dict = Depends(obter_usuario_logado)):
                 """
             result_servicos = conn.execute(text(sql_servicos), parametros_data).mappings().fetchall()
             
-            detalhe_hoje = formatar_servicos(result_servicos, "qtd_hoje")
-            detalhe_semana = formatar_servicos(result_servicos, "qtd_semana")
-            detalhe_mes = formatar_servicos(result_servicos, "qtd_mes")
-            detalhe_ano = formatar_servicos(result_servicos, "qtd_ano")
+            detalhe_hoje = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_hoje"]}
+                for row in result_servicos if row["qtd_hoje"] > 0
+            ]
+
+            detalhe_semana = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_semana"]}
+                for row in result_servicos if row["qtd_semana"] > 0
+            ]
+
+            detalhe_mes = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_mes"]}
+                for row in result_servicos if row["qtd_mes"] > 0
+            ]
+
+            detalhe_ano = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_ano"]}
+                for row in result_servicos if row["qtd_ano"] > 0
+            ]
 
             # 4. RANKING DE ASSIDUIDADE (Isolado por empresa_id)
             sql_ranking = """
