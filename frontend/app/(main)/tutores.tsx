@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { TextInput, View, Text } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { tutorApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
@@ -11,6 +11,7 @@ import type { Tutor } from "../../src/types";
 const emptyForm = { nome: "", celular: "", endereco: "" };
 
 export default function TutoresScreen() {
+  const router = useRouter();
   const [tutores, setTutores] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -116,6 +117,15 @@ export default function TutoresScreen() {
         </View>
       }
     >
+      
+      <View className="mb-4">
+        <Button
+          title="← Voltar para Agenda"
+          variant="secondary"
+          onPress={() => router.replace("/(main)/agenda")}
+        />
+      </View>
+
       <ErrorBanner message={error} />
 
       {formOpen ? (
