@@ -78,6 +78,14 @@ export default function AgendaScreen() {
         servicoApi.list(),
       ]);
       setAtendimentos(agenda);
+      console.log(
+      "DATAS RECEBIDAS DA API:",
+      agenda.map((item) => ({
+      id: item.id,
+      data: item.data_atendimento,
+      horario: item.horario_atendimento,
+      }))
+    );
       setPets(petList);
       setServicos(servicoList);
     } catch (err) {
