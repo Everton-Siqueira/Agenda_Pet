@@ -33,23 +33,23 @@ def get_resumo_gerencial(usuario: dict = Depends(obter_usuario_logado)):
 
         with engine.connect() as conn:
             # 1. TOTAL DE PETS (Isolado por empresa)
-                total_pets = conn.execute(
+            total_pets = conn.execute(
                 text("SELECT COUNT(id) FROM pet WHERE empresa_id = :empresa_id"),
                 {"empresa_id": empresa_id}
                 ).scalar() or 0
 
             # 2. ATENDIMENTOS E FATURAMENTO (Isolado com WHERE empresa_id)
-                sql_metricas = """
+            sql_metricas = """
                 SELECT 
-                    COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :semana AND status != 'cancelado') as atend_semana,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes AND status != 'cancelado') as atend_mes,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano AND status != 'cancelado') as atend_ano,
+                COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
+                COUNT(id) FILTER (WHERE data_atendimento >= :semana AND status != 'cancelado') as atend_semana,
+                COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes AND status != 'cancelado') as atend_mes,
+                COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano AND status != 'cancelado') as atend_ano,
                     
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'concluido'), 0) as fat_hoje,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'concluido'), 0) as fat_semana,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'concluido'), 0) as fat_mes,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'concluido'), 0) as fat_ano
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'concluido'), 0) as fat_hoje,
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'concluido'), 0) as fat_semana,
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'concluido'), 0) as fat_mes,
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'concluido'), 0) as fat_ano
                 FROM atendimento
                 WHERE data_atendimento >= :inicio_ano AND empresa_id = :empresa_id
             """
