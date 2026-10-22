@@ -268,6 +268,9 @@ export default function AgendaScreen() {
                 {pet ? pet.nome_pet : `Pet #${item.id_pet}`}
               </Text>
               <Text className="text-sm text-slate-500">
+                Tutor: {tutor?.nome ?? "Tutor não identificado"}
+              </Text>
+              <Text className="text-sm text-slate-500">
                 {servico ? servico.nome_servico : `Serviço #${item.id_servico}`}
               </Text>
             </View>
