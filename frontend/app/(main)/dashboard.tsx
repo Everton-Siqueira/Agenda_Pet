@@ -78,12 +78,12 @@ export default function DashboardScreen() {
         </View>
 
         <Card className="gap-4 mb-4">
-          <Text className="text-lg font-bold text-slate-900">Volumetria por Período</Text>
+          <Text className="text-lg font-bold text-slate-900">Resumo de Atendimentos</Text>
           
           <View className="border-b border-slate-100 pb-2 flex-row justify-between">
             <Text className="font-semibold text-slate-400 text-xs w-[30%]">PERÍODO</Text>
             <Text className="font-semibold text-slate-400 text-xs text-center flex-1">DETALHE DOS SERVIÇOS</Text>
-            <Text className="font-semibold text-slate-400 text-xs text-right flex-1">AGENDAMENTOS</Text>
+            <Text className="font-semibold text-slate-400 text-xs text-right flex-1">ATENDIMENTOS</Text>
           </View>
 
           <TableRow periodo="Hoje" detalhe={dados?.servicos.hoje ?? "Nenhum"} atendimentos={dados?.atendimentos.hoje ?? 0} />
@@ -147,7 +147,7 @@ function TableRow({ periodo, detalhe, atendimentos }: { periodo: string; detalhe
     <View className="flex-row justify-between items-center py-2 border-b border-slate-50">
       <Text className="text-sm font-semibold text-slate-700 w-[30%]">{periodo}</Text>
       <Text className="text-xs font-medium text-slate-500 text-center flex-1 px-2">{detalhe}</Text>
-      <Text className="text-sm font-bold text-teal-800 text-right flex-1">{atendimentos} check-ins</Text>
+      <Text className="text-sm font-bold text-teal-800 text-right flex-1">{atendimentos} {atendimentos} {atendimentos === 1 ? "atendimento" : "atendimentos"}</Text>
     </View>
   );
 }
