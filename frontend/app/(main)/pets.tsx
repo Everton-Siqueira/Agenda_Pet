@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Text, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { petApi, tutorApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
@@ -11,6 +11,7 @@ import type { Pet, Tutor } from "../../src/types";
 const emptyForm = { nome_pet: "", especie: "", id_tutor: "" };
 
 export default function PetsScreen() {
+  const router = useRouter();
   const [pets, setPets] = useState<Pet[]>([]);
   const [tutores, setTutores] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,8 +121,16 @@ export default function PetsScreen() {
         </View>
       }
     >
-      <ErrorBanner message={error} />
+    
+      <View className="mb-4">
+        <Button
+          title="← Voltar para Agenda"
+          variant="secondary"
+          onPress={() => router.replace("/(main)/agenda")}
+        />
+      </View>
 
+      <ErrorBanner message={error} />
       {formOpen ? (
         <Card className="gap-4">
           <Text className="text-lg font-semibold text-slate-900">{editingId ? "Editar pet" : "Novo pet"}</Text>
