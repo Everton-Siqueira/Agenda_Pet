@@ -143,10 +143,12 @@ export default function AgendaScreen() {
 
     try {
       if (editingId) {
-        await atendimentoApi.update(editingId, payload);
+        console.log("EDITANDO atendimento ID:", editingId);
+    await atendimentoApi.update(editingId, payload);
       } else {
-        await atendimentoApi.create(payload);
-      }
+    console.log("CRIANDO novo atendimento");
+    await atendimentoApi.create(payload);
+  }
       setFormOpen(false);
       await load();
     } catch (err) {
