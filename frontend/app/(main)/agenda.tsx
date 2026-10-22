@@ -39,6 +39,7 @@ export default function AgendaScreen() {
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
+  const [tutores, setTutores] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,10 +72,11 @@ export default function AgendaScreen() {
     setError(null);
     setLoading(true);
     try {
-      const [agenda, petList, servicoList] = await Promise.all([
+      const [agenda, petList, servicoList, tutorList] = await Promise.all([
         atendimentoApi.list(),
         petApi.list(),
-        servicoApi.list(),
+      servicoApi.list(),
+      tutorApi.list(),
       ]);
       setAtendimentos(agenda);
       console.log(
@@ -87,6 +89,7 @@ export default function AgendaScreen() {
     );
       setPets(petList);
       setServicos(servicoList);
+      setTutores(tutorList);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
