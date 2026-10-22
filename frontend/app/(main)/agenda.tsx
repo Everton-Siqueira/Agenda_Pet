@@ -50,6 +50,10 @@ export default function AgendaScreen() {
   const [buscaPetForm, setBuscaPetForm] = useState("");
 
   const petMap = useMemo(() => new Map((pets || []).map((pet) => [pet.id, pet])), [pets]);
+  const tutorMap = useMemo(
+  () => new Map((tutores || []).map((tutor) => [tutor.id, tutor])),
+  [tutores]
+);
   const servicoMap = useMemo(
     () => new Map((servicos || []).map((servico) => [servico.id, servico])),
     [servicos]
