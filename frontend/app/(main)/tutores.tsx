@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { TextInput, View, Text } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { tutorApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
@@ -11,6 +11,7 @@ import type { Tutor } from "../../src/types";
 const emptyForm = { nome: "", celular: "", endereco: "" };
 
 export default function TutoresScreen() {
+  const router = useRouter();
   const [tutores, setTutores] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,21 +47,31 @@ export default function TutoresScreen() {
 
   function openEdit(tutor: Tutor) {
     setEditingId(tutor.id);
-    setForm({ nome: tutor.nome, celular: tutor.celular, endereco: tutor.endereco });
-    setFormOpen(true);
-  }
+
+    setForm({
+      nome: String(tutor.nome ?? ""),
+      celular: String(tutor.celular ?? ""),
+      endereco: String(tutor.endereco ?? ""),
+    });
+
+  setFormOpen(true);
+}
 
   async function handleSave() {
     setError(null);
-    if (!form.nome.trim() || !form.celular.trim() || !form.endereco.trim()) {
+    if (
+      !String(form.nome ?? "").trim() ||
+      !String(form.celular ?? "").trim() ||
+      !String(form.endereco ?? "").trim()
+    ) {
       setError("Preencha todos os campos.");
       return;
     }
 
     const payload = {
-      nome: form.nome.trim(),
-      celular: form.celular.trim(),
-      endereco: form.endereco.trim(),
+      nome: String(form.nome ?? "").trim(),
+      celular: String(form.celular ?? "").trim(),
+      endereco: String(form.endereco ?? "").trim(),
     };
 
     setSaving(true);
@@ -106,6 +117,15 @@ export default function TutoresScreen() {
         </View>
       }
     >
+      
+      <View className="mb-4">
+        <Button
+          title="← Voltar para Agenda"
+          variant="secondary"
+          onPress={() => router.replace("/(main)/agenda")}
+        />
+      </View>
+
       <ErrorBanner message={error} />
 
       {formOpen ? (

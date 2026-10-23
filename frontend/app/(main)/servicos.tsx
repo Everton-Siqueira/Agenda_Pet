@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getErrorMessage } from "../../src/api/client";
 import { servicoApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
@@ -9,9 +9,10 @@ import { confirmAction } from "../../src/utils/confirm";
 import { formatMoney } from "../../src/utils/format";
 import type { Servico } from "../../src/types";
 
-const emptyForm = { tipo_servico: "", valor: "" };
+const emptyForm = { nome_servico: "", valor: "" };
 
 export default function ServicosScreen() {
+  const router = useRouter();
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,20 +48,20 @@ export default function ServicosScreen() {
 
   function openEdit(servico: Servico) {
     setEditingId(servico.id);
-    setForm({ tipo_servico: servico.tipo_servico, valor: String(servico.valor) });
+    setForm({ nome_servico: servico.nome_servico, valor: String(servico.preco) });
     setFormOpen(true);
   }
 
   async function handleSave() {
     setError(null);
-    if (!form.tipo_servico.trim() || !form.valor.trim()) {
-      setError("Preencha o tipo e o valor.");
+    if (!form.nome_servico.trim() || !form.valor.trim()) {
+      setError("Preencha o nome e o preço.");
       return;
     }
 
     const payload = {
-      tipo_servico: form.tipo_servico.trim(),
-      valor: Number(form.valor.replace(",", ".")),
+      nome_servico: form.nome_servico.trim(),
+      preco: Number(form.valor.replace(",", ".")),
     };
 
     setSaving(true);
@@ -92,13 +93,13 @@ export default function ServicosScreen() {
 
   // Filtra os serviços pelo termo digitado e os organiza em ordem alfabética (A-Z)
   const servicosFiltrados = servicos
-    .filter((servico) => servico.tipo_servico.toLowerCase().includes(busca.toLowerCase()))
-    .sort((a, b) => a.tipo_servico.localeCompare(b.tipo_servico));
+    .filter((servico) => servico.nome_servico.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => a.nome_servico.localeCompare(b.nome_servico));
 
   return (
     <Screen
       title="Serviços"
-      subtitle="Tipos como Banho e Tosa, sem números no nome, via /servico."
+      subtitle="Nomes como Banho e Tosa, sem números no nome, via /servico."
       loading={loading}
       headerRight={
         <View className="w-32">
@@ -106,6 +107,15 @@ export default function ServicosScreen() {
         </View>
       }
     >
+      
+      <View className="mb-4">
+        <Button
+          title="← Voltar para Agenda"
+          variant="secondary"
+          onPress={() => router.replace("/(main)/agenda")}
+        />
+      </View>
+
       <ErrorBanner message={error} />
 
       {formOpen ? (
@@ -114,10 +124,10 @@ export default function ServicosScreen() {
             {editingId ? "Editar serviço" : "Novo serviço"}
           </Text>
           <Input
-            label="Tipo do serviço"
+            label="Nome do serviço"
             placeholder="Banho e Tosa"
-            value={form.tipo_servico}
-            onChangeText={(tipo_servico) => setForm((current) => ({ ...current, tipo_servico }))}
+            value={form.nome_servico}
+            onChangeText={(nome_servico) => setForm((current) => ({ ...current, nome_servico }))}
           />
           <Input
             label="Valor"
@@ -132,7 +142,7 @@ export default function ServicosScreen() {
         /* Barra de pesquisa inteligente para Serviços */
         <View className="mb-4">
           <Input
-              placeholder="🔍 Procurar por tipo de serviço..."
+              placeholder="🔍 Procurar por nome do serviço..."
               value={busca}
               onChangeText={setBusca} label={""}          />
         </View>
@@ -148,8 +158,8 @@ export default function ServicosScreen() {
         servicosFiltrados.map((servico) => (
           <Card key={servico.id} className="gap-3 mb-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-semibold text-slate-900">{servico.tipo_servico}</Text>
-              <Text className="text-base font-semibold text-teal-800">{formatMoney(servico.valor)}</Text>
+              <Text className="text-lg font-semibold text-slate-900">{servico.nome_servico}</Text>
+              <Text className="text-base font-semibold text-teal-800">{formatMoney(servico.preco)}</Text>
             </View>
             <View className="flex-row gap-2">
               <View className="flex-1">

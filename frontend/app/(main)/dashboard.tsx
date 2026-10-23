@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { API_URL, getErrorMessage } from "../../src/api/client";
 import { dashboardApi } from "../../src/api/petshop";
 import { Screen } from "../../src/components/Page";
-import { Card, ErrorBanner } from "../../src/components/ui";
+import { Button, Card, ErrorBanner } from "../../src/components/ui";
 import { formatMoney } from "../../src/utils/format";
 
 interface PeriodoMetricas {
@@ -14,11 +14,16 @@ interface PeriodoMetricas {
   ano: number;
 }
 
+interface ServicoResumo {
+  nome_servico: string;
+  quantidade: number;
+}
+
 interface PeriodoServicos {
-  hoje: string;
-  semana: string;
-  mes: string;
-  ano: string;
+  hoje: ServicoResumo[];
+  semana: ServicoResumo[];
+  mes: ServicoResumo[];
+  ano: ServicoResumo[];
 }
 
 interface PeriodoFaturamento {
@@ -44,6 +49,7 @@ interface NovaDashboardDados {
 }
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const [dados, setDados] = useState<NovaDashboardDados | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +75,16 @@ export default function DashboardScreen() {
 
   return (
     <Screen title="Painel de Controle" subtitle={`Indicadores Gerenciais · API ${API_URL}`} loading={loading}>
+
+      
+      <View className="mb-4">
+        <Button
+          title="← Voltar para Agenda"
+          variant="secondary"
+          onPress={() => router.replace("/(main)/agenda")}
+        />
+      </View>
+
       <ErrorBanner message={error} />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -78,18 +94,18 @@ export default function DashboardScreen() {
         </View>
 
         <Card className="gap-4 mb-4">
-          <Text className="text-lg font-bold text-slate-900">Volumetria por Período</Text>
+          <Text className="text-lg font-bold text-slate-900">Resumo de Atendimentos</Text>
           
           <View className="border-b border-slate-100 pb-2 flex-row justify-between">
             <Text className="font-semibold text-slate-400 text-xs w-[30%]">PERÍODO</Text>
             <Text className="font-semibold text-slate-400 text-xs text-center flex-1">DETALHE DOS SERVIÇOS</Text>
-            <Text className="font-semibold text-slate-400 text-xs text-right flex-1">AGENDAMENTOS</Text>
+            <Text className="font-semibold text-slate-400 text-xs text-right flex-1">ATENDIMENTOS</Text>
           </View>
 
-          <TableRow periodo="Hoje" detalhe={dados?.servicos.hoje ?? "Nenhum"} atendimentos={dados?.atendimentos.hoje ?? 0} />
-          <TableRow periodo="Esta Semana" detalhe={dados?.servicos.semana ?? "Nenhum"} atendimentos={dados?.atendimentos.semana ?? 0} />
-          <TableRow periodo="Este Mês" detalhe={dados?.servicos.mes ?? "Nenhum"} atendimentos={dados?.atendimentos.mes ?? 0} />
-          <TableRow periodo="Este Ano" detalhe={dados?.servicos.ano ?? "Nenhum"} atendimentos={dados?.atendimentos.ano ?? 0} />
+          <TableRow periodo="Hoje" detalhe={dados?.servicos.hoje ?? []} atendimentos={dados?.atendimentos.hoje ?? 0} />
+          <TableRow periodo="Esta Semana" detalhe={dados?.servicos.semana ?? []} atendimentos={dados?.atendimentos.semana ?? 0} />
+          <TableRow periodo="Este Mês" detalhe={dados?.servicos.mes ?? []} atendimentos={dados?.atendimentos.mes ?? 0} />
+          <TableRow periodo="Este Ano" detalhe={dados?.servicos.ano ?? []} atendimentos={dados?.atendimentos.ano ?? 0} />
         </Card>
 
         <Card className="gap-3 mb-4">
@@ -142,12 +158,53 @@ export default function DashboardScreen() {
   );
 }
 
-function TableRow({ periodo, detalhe, atendimentos }: { periodo: string; detalhe: string; atendimentos: number }) {
+function TableRow({
+  periodo,
+  detalhe,
+  atendimentos,
+}: {
+  periodo: string;
+  detalhe: ServicoResumo[];
+  atendimentos: number;
+}) {
   return (
-    <View className="flex-row justify-between items-center py-2 border-b border-slate-50">
-      <Text className="text-sm font-semibold text-slate-700 w-[30%]">{periodo}</Text>
-      <Text className="text-xs font-medium text-slate-500 text-center flex-1 px-2">{detalhe}</Text>
-      <Text className="text-sm font-bold text-teal-800 text-right flex-1">{atendimentos} check-ins</Text>
+    <View className="py-3 border-b border-slate-100">
+      <View className="flex-row justify-between items-center mb-2">
+        <Text className="text-sm font-semibold text-slate-700">
+          {periodo}
+        </Text>
+
+        <Text className="text-sm font-bold text-teal-800">
+          {atendimentos}{" "}
+          {atendimentos === 1 ? "atendimento" : "atendimentos"}
+        </Text>
+      </View>
+
+      {detalhe.length === 0 ? (
+        <Text className="text-xs text-slate-400 italic">
+          Nenhum serviço concluído
+        </Text>
+      ) : (
+        <View className="gap-2 pl-2">
+          {detalhe.map((servico) => (
+            <View
+              key={servico.nome_servico}
+              className="flex-row justify-between items-center"
+            >
+              <Text className="text-sm text-slate-600">
+                {servico.nome_servico}
+              </Text>
+
+              <Text className="text-sm font-medium text-slate-700">
+                {servico.quantidade}{" "}
+                {servico.quantidade === 1
+                  ? "serviço realizado"
+                  : "serviços realizados"}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

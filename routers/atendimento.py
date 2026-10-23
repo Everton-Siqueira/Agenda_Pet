@@ -1,15 +1,17 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Body
 from sqlalchemy import text
 from database import engine
 from security import obter_usuario_logado
+from classes.atendimento import Atendimento
+
 
 router = APIRouter(prefix="/atendimento", tags=["Atendimento / Agenda"])
 
 
 @router.post("")
 def create_atendimento(
-    atendimento: dict,
-    usuario: dict = Depends(obter_usuario_logado)
+    atendimento: Atendimento,  # 🟢 O Pydantic valida e limpa a data "25102026" automaticamente
+    usuario: dict = Depends(obter_usuario_logado)  # 🔒 Identifica quem está logado
 ):
     try:
         with engine.begin() as conn:
@@ -36,13 +38,13 @@ def create_atendimento(
             """
 
             dados = {
-                "id_pet": atendimento.get("id_pet"),
-                "id_servico": atendimento.get("id_servico"),
-                "data_atendimento": atendimento.get("data_atendimento"),
-                "horario_atendimento": atendimento.get("horario_atendimento"),
-                "valor": atendimento.get("valor"),
-                "status": atendimento.get("status", "Agendado"),
-                "empresa_id": usuario["empresa_id"]
+                "id_pet": atendimento.id_pet,
+                "id_servico": atendimento.id_servico,
+                "data_atendimento": atendimento.data_atendimento,  # Objeto date seguro convertido pela classe
+                "horario_atendimento": atendimento.horario_atendimento,
+                "valor": atendimento.valor,
+                "status": atendimento.status,
+                "empresa_id": usuario["empresa_id"]  # 🔒 Vincula obrigatoriamente à empresa do usuário logado
             }
 
             result = conn.execute(text(sql), dados)
@@ -52,16 +54,23 @@ def create_atendimento(
                 "id": result.fetchone()[0]
             }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
 
+    except Exception as e:
+        print(f"Erro ao criar agendamento: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível salvar o agendamento. Verifique os dados e tente novamente. Se o problema continuar, entre em contato com o responsável pelo sistema."
+        )
 
 @router.get("")
 def get_atendimentos(
-    usuario: dict = Depends(obter_usuario_logado)
+    usuario: dict = Depends(obter_usuario_logado)  # 🔒 Identifica quem está logado
 ):
     try:
         with engine.connect() as conn:
+            # 🔒 JOINs e WHERE garantem isolamento total entre os clientes do banco
             sql = """
                 SELECT
                     a.*,
@@ -82,7 +91,7 @@ def get_atendimentos(
 
             result = conn.execute(
                 text(sql),
-                {"empresa_id": usuario["empresa_id"]}
+                {"empresa_id": usuario["empresa_id"]}  # 🔒 Filtra apenas dados da empresa atual
             )
 
             return [dict(row._mapping) for row in result]
@@ -94,12 +103,12 @@ def get_atendimentos(
 @router.put("/{atendimento_id}")
 def update_atendimento(
     atendimento_id: int,
-    dados: dict,
-    usuario: dict = Depends(obter_usuario_logado)
+    dados: Atendimento,  # 🟢 Usa a classe de validação na atualização também
+    usuario: dict = Depends(obter_usuario_logado)  # 🔒 Identifica quem está logado
 ):
     try:
         with engine.begin() as conn:
-            # CORREÇÃO: Permite atualizar todos os campos do agendamento enviados pelo formulário
+            # 🔒 O WHERE garante que o usuário só consiga atualizar registros da própria empresa
             sql = """
                 UPDATE atendimento
                 SET 
@@ -116,14 +125,14 @@ def update_atendimento(
             result = conn.execute(
                 text(sql),
                 {
-                    "id_pet": dados.get("id_pet"),
-                    "id_servico": dados.get("id_servico"),
-                    "data_atendimento": dados.get("data_atendimento"),
-                    "horario_atendimento": dados.get("horario_atendimento"),
-                    "valor": dados.get("valor"),
-                    "status": dados.get("status"),
+                    "id_pet": dados.id_pet,
+                    "id_servico": dados.id_servico,
+                    "data_atendimento": dados.data_atendimento,
+                    "horario_atendimento": dados.horario_atendimento,
+                    "valor": dados.valor,
+                    "status": dados.status,
                     "atendimento_id": atendimento_id,
-                    "empresa_id": usuario["empresa_id"]
+                    "empresa_id": usuario["empresa_id"]  # 🔒 Bloqueia alterações em registros de terceiros
                 }
             )
 
@@ -136,10 +145,101 @@ def update_atendimento(
             return {
                 "message": "Agendamento atualizado com sucesso!"
             }
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+@router.patch("/{atendimento_id}/status")
+def update_status_atendimento(
+    atendimento_id: int,
+    dados: dict = Body(...),
+    usuario: dict = Depends(obter_usuario_logado)
+):
+    novo_status = dados.get("status")
+
+    if novo_status not in ["pendente", "concluido", "cancelado"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Status inválido."
+        )
+
+    try:
+        with engine.begin() as conn:
+            sql = """
+                UPDATE atendimento
+                SET status = :status
+                WHERE id = :atendimento_id
+                AND empresa_id = :empresa_id
+            """
+
+            result = conn.execute(
+                text(sql),
+                {
+                    "status": novo_status,
+                    "atendimento_id": atendimento_id,
+                    "empresa_id": usuario["empresa_id"]
+                }
+            )
+
+            if result.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Agendamento não encontrado ou sem permissão para alterar."
+                )
+
+            return {
+                "message": "Status do atendimento atualizado com sucesso!",
+                "status": novo_status
+            }
 
     except HTTPException:
         raise
 
+    except Exception as e:
+        print(f"Erro ao atualizar agendamento: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível atualizar o agendamento. Tente novamente."
+        )
+
+@router.delete("/{atendimento_id}")
+def delete_atendimento(
+    atendimento_id: int,
+    usuario: dict = Depends(obter_usuario_logado)
+):
+    try:
+        with engine.begin() as conn:
+            sql = """
+                DELETE FROM atendimento
+                WHERE id = :atendimento_id
+                AND empresa_id = :empresa_id
+            """
+
+            result = conn.execute(
+                text(sql),
+                {
+                    "atendimento_id": atendimento_id,
+                    "empresa_id": usuario["empresa_id"]
+                }
+            )
+
+            if result.rowcount == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Agendamento não encontrado ou sem permissão para excluir."
+                )
+
+            return {
+                "message": "Agendamento excluído com sucesso!"
+            }
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,

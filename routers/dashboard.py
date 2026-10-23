@@ -34,22 +34,22 @@ def get_resumo_gerencial(usuario: dict = Depends(obter_usuario_logado)):
         with engine.connect() as conn:
             # 1. TOTAL DE PETS (Isolado por empresa)
             total_pets = conn.execute(
-                text("SELECT COUNT(id) FROM pet WHERE empresa_id = :empresa_id AND ativo = TRUE"), 
+                text("SELECT COUNT(id) FROM pet WHERE empresa_id = :empresa_id"),
                 {"empresa_id": empresa_id}
-            ).scalar() or 0
+                ).scalar() or 0
 
             # 2. ATENDIMENTOS E FATURAMENTO (Isolado com WHERE empresa_id)
             sql_metricas = """
                 SELECT 
-                    COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :semana AND status != 'cancelado') as atend_semana,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes AND status != 'cancelado') as atend_mes,
-                    COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano AND status != 'cancelado') as atend_ano,
+                COUNT(id) FILTER (WHERE data_atendimento = :hoje AND status != 'cancelado') as atend_hoje,
+                COUNT(id) FILTER (WHERE data_atendimento >= :semana AND status != 'cancelado') as atend_semana,
+                COUNT(id) FILTER (WHERE data_atendimento >= :inicio_mes AND status != 'cancelado') as atend_mes,
+                COUNT(id) FILTER (WHERE data_atendimento >= :inicio_ano AND status != 'cancelado') as atend_ano,
                     
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'concluido'), 0) as fat_hoje,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'concluido'), 0) as fat_semana,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'concluido'), 0) as fat_mes,
-                    COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'concluido'), 0) as fat_ano
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento = :hoje AND status = 'concluido'), 0) as fat_hoje,
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :semana AND status = 'concluido'), 0) as fat_semana,
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_mes AND status = 'concluido'), 0) as fat_mes,
+                COALESCE(SUM(valor) FILTER (WHERE data_atendimento >= :inicio_ano AND status = 'concluido'), 0) as fat_ano
                 FROM atendimento
                 WHERE data_atendimento >= :inicio_ano AND empresa_id = :empresa_id
             """
@@ -79,25 +79,39 @@ def get_resumo_gerencial(usuario: dict = Depends(obter_usuario_logado)):
 
             # 3. DETALHAMENTO DE SERVIÇOS (Garantido relacionamento correto com empresa_id)
             sql_servicos = """
-                SELECT 
-                    s.tipo_servico,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje AND a.status = 'concluido') as qtd_hoje,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana AND a.status = 'concluido') as qtd_semana,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes AND a.status = 'concluido') as qtd_mes,
-                    COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano AND a.status = 'concluido') as qtd_ano
+                SELECT s.nome_servico AS tipo_servico,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento = :hoje AND a.status = 'concluido') AS qtd_hoje,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento >= :semana AND a.status = 'concluido') AS qtd_semana,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_mes AND a.status = 'concluido') AS qtd_mes,
+                COUNT(a.id) FILTER (WHERE a.data_atendimento >= :inicio_ano AND a.status = 'concluido') AS qtd_ano
                 FROM atendimento a
                 JOIN servico s ON a.id_servico = s.id AND s.empresa_id = a.empresa_id
-                WHERE a.data_atendimento >= :inicio_ano 
-                  AND a.status = 'concluido'
-                  AND a.empresa_id = :empresa_id
-                GROUP BY s.tipo_servico
-            """
+                WHERE a.data_atendimento >= :inicio_ano
+                AND a.status = 'concluido'
+                AND a.empresa_id = :empresa_id
+                GROUP BY s.nome_servico
+                """
             result_servicos = conn.execute(text(sql_servicos), parametros_data).mappings().fetchall()
             
-            detalhe_hoje = formatar_servicos(result_servicos, "qtd_hoje")
-            detalhe_semana = formatar_servicos(result_servicos, "qtd_semana")
-            detalhe_mes = formatar_servicos(result_servicos, "qtd_mes")
-            detalhe_ano = formatar_servicos(result_servicos, "qtd_ano")
+            detalhe_hoje = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_hoje"]}
+                for row in result_servicos if row["qtd_hoje"] > 0
+            ]
+
+            detalhe_semana = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_semana"]}
+                for row in result_servicos if row["qtd_semana"] > 0
+            ]
+
+            detalhe_mes = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_mes"]}
+                for row in result_servicos if row["qtd_mes"] > 0
+            ]
+
+            detalhe_ano = [
+                {"nome_servico": row["tipo_servico"], "quantidade": row["qtd_ano"]}
+                for row in result_servicos if row["qtd_ano"] > 0
+            ]
 
             # 4. RANKING DE ASSIDUIDADE (Isolado por empresa_id)
             sql_ranking = """
