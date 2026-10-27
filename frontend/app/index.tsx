@@ -30,7 +30,7 @@ export default function LoginScreen() {
 
   const router = useRouter();
   const { loginAsStaff } = useAuth();
-  const apiUrl = 'http://192.168.100.114:8000';
+  const apiUrl = 'http://192.168.100.113:8000';
 
   const handleLogin = async () => {
     const emailLimpo = email.trim().toLowerCase();
